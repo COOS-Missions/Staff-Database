@@ -3,7 +3,7 @@
 ========================================== */
 
 const CONFIG = {
-    APP_NAME: "Missions Portal",
+    APP_NAME: "Missions Management System",
     VERSION: "1.0.0",
 
     CLIENT_ID: "907761640441-eul5vjjulde6e9a7n0053lt8p1uj5468.apps.googleusercontent.com",
