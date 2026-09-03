@@ -5956,6 +5956,7 @@ async function deleteEvent(id) {
 
 window.CommunicationsCentre = (() => {
 
+
     /* =========================================================
        GLOBAL STATE
     ========================================================= */
@@ -5971,197 +5972,7 @@ window.CommunicationsCentre = (() => {
     let reminderConfig = {};
     let publicityConfig = {};
 
-
-    /* =========================================================
-       INITIALISATION
-    ========================================================= */
-
     let initialised = false;
-
-    async function cinit() {
-
-        /*
-         * Communications Centre does not bind the main
-         * Event Management UI.
-         *
-         * Event Management is responsible for its own
-         * event listeners.
-         */
-
-        if (initialised) {
-            /*
-             * Still reload the event data whenever the
-             * Communications Centre is opened.
-             */
-            await loadEvents();
-            return;
-        }
-
-        initialised = true;
-
-        /*
-         * Load the current event list.
-         */
-        await loadEvents();
-    }
-
-
-    /* =========================================================
-       LOAD EVENTS
-    ========================================================= */
-
-    async function loadEvents() {
-
-        try {
-
-            const response =
-                await API.post(
-                    "getEventList",
-                    {}
-                );
-
-            if (
-                !response ||
-                !response.success
-            ) {
-
-                throw new Error(
-                    response?.message ||
-                    "Unable to load events."
-                );
-            }
-
-
-            /*
-             * Only ACTIVE events should appear.
-             */
-            events =
-                Array.isArray(response.data)
-                    ? response.data.filter(
-                        event =>
-                            String(
-                                event.status || ""
-                            ).toUpperCase() === "ACTIVE"
-                    )
-                    : [];
-
-
-            populateEventDropdown();
-
-        } catch (error) {
-
-            console.error(
-                "Communications Centre - loadEvents:",
-                error
-            );
-
-            const info =
-                document.getElementById(
-                    "selectedEventInfo"
-                );
-
-            if (info) {
-
-                info.innerHTML =
-                    `<div class="error-message">
-                        ${escapeHtml(
-                            error.message ||
-                            "Unable to load events."
-                        )}
-                    </div>`;
-            }
-        }
-    }
-
-
-    /* =========================================================
-       EVENT DROPDOWN
-    ========================================================= */
-
-    function populateEventDropdown() {
-
-        const select =
-            document.getElementById(
-                "eventFilter"
-            );
-
-        if (!select) {
-            return;
-        }
-
-
-        select.innerHTML = `
-            <option value="">
-                Select Event
-            </option>
-        `;
-
-
-        events.forEach(event => {
-
-            const spreadsheetId =
-                event.spreadsheetId ||
-                event.id ||
-                event.eventId ||
-                "";
-
-            const eventName =
-                getEventName(event);
-
-            const eventDate =
-                getEventDate(event);
-
-
-            const option =
-                document.createElement(
-                    "option"
-                );
-
-            option.value =
-                spreadsheetId;
-
-            option.textContent =
-                eventDate
-                    ? `${eventName} — ${eventDate}`
-                    : eventName;
-
-            select.appendChild(
-                option
-            );
-        });
-
-
-        /*
-         * Preserve URL preset if supplied.
-         */
-        if (presetEvent) {
-
-            const matchingEvent =
-                events.find(event => {
-
-                    const id =
-                        event.spreadsheetId ||
-                        event.id ||
-                        event.eventId ||
-                        "";
-
-                    return String(id) ===
-                           String(presetEvent);
-                });
-
-
-            if (matchingEvent) {
-
-                select.value =
-                    matchingEvent.spreadsheetId ||
-                    matchingEvent.id ||
-                    matchingEvent.eventId ||
-                    "";
-
-                selectEvent();
-            }
-        }
-    }
 
 
     /* =========================================================
@@ -6178,15 +5989,294 @@ window.CommunicationsCentre = (() => {
 
 
     /* =========================================================
-       SELECT EVENT
+       INITIALISATION
     ========================================================= */
 
-    function selectEvent() {
+    async function cinit() {
+
+        console.log(
+            "CommunicationsCentre.cinit() CALLED"
+        );
+
+        console.log(
+            "eventFilter:",
+            document.getElementById(
+                "eventFilter"
+            )
+        );
+
+        /*
+         * Communications Centre does NOT bind
+         * Event Management listeners.
+         *
+         * Event Management is responsible for
+         * its own bindings.
+         */
+
+        if (!initialised) {
+            initialised = true;
+        }
+
+        /*
+         * Always reload events whenever the
+         * Communications Centre is opened.
+         */
+        await loadEvents();
+    }
+
+
+    /* =========================================================
+       LOAD EVENTS
+    ========================================================= */
+
+    async function loadEvents() {
+
+        console.log(
+            "CommunicationsCentre.loadEvents() CALLED"
+        );
+
+        try {
+
+            const response =
+                await API.post(
+                    "getEventList",
+                    {}
+                );
+
+            console.log(
+                "getEventList RESPONSE:",
+                response
+            );
+
+
+            if (
+                !response ||
+                !response.success
+            ) {
+
+                throw new Error(
+                    response?.message ||
+                    "Unable to load events."
+                );
+            }
+
+
+            console.log(
+                "getEventList DATA:",
+                response.data
+            );
+
+
+            /*
+             * IMPORTANT:
+             *
+             * Do NOT filter by ACTIVE yet.
+             *
+             * We first want to confirm the
+             * actual structure returned by the API.
+             */
+            events =
+                Array.isArray(
+                    response.data
+                )
+                    ? response.data
+                    : [];
+
+
+            console.log(
+                "Communications Centre EVENTS:",
+                events
+            );
+
+
+            populateEventDropdown();
+
+
+        } catch (error) {
+
+            console.error(
+                "Communications Centre - loadEvents:",
+                error
+            );
+
+
+            const info =
+                document.getElementById(
+                    "selectedEventInfo"
+                );
+
+
+            if (info) {
+
+                info.innerHTML =
+                    `<div class="error-message">
+                        ${escapeHtml(
+                            error.message ||
+                            "Unable to load events."
+                        )}
+                    </div>`;
+            }
+        }
+    }
+
+
+    /* =========================================================
+       POPULATE EVENT DROPDOWN
+    ========================================================= */
+
+    function populateEventDropdown() {
+
+        console.log(
+            "populateEventDropdown()"
+        );
+
 
         const select =
             document.getElementById(
                 "eventFilter"
             );
+
+
+        if (!select) {
+
+            console.error(
+                "Communications Centre: #eventFilter not found."
+            );
+
+            return;
+        }
+
+
+        console.log(
+            "Populating event dropdown with:",
+            events
+        );
+
+
+        select.innerHTML = `
+            <option value="">
+                Select Event
+            </option>
+        `;
+
+
+        events.forEach(
+            (event, index) => {
+
+                console.log(
+                    "Processing event:",
+                    index,
+                    event
+                );
+
+
+                const spreadsheetId =
+                    event.spreadsheetId ||
+                    event.spreadsheetID ||
+                    event.id ||
+                    event.eventId ||
+                    "";
+
+
+                const eventName =
+                    getEventName(
+                        event
+                    );
+
+
+                const eventDate =
+                    getEventDate(
+                        event
+                    );
+
+
+                if (!spreadsheetId) {
+
+                    console.warn(
+                        "Event has no spreadsheet ID:",
+                        event
+                    );
+                }
+
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                option.value =
+                    spreadsheetId;
+
+
+                option.textContent =
+                    eventDate
+                        ? `${eventName} — ${eventDate}`
+                        : eventName;
+
+
+                select.appendChild(
+                    option
+                );
+            }
+        );
+
+
+        /*
+         * Apply preset event if supplied
+         * through the URL.
+         */
+        if (presetEvent) {
+
+            const matchingEvent =
+                events.find(
+                    event => {
+
+                        const id =
+                            event.spreadsheetId ||
+                            event.spreadsheetID ||
+                            event.id ||
+                            event.eventId ||
+                            "";
+
+                        return String(id) ===
+                               String(presetEvent);
+                    }
+                );
+
+
+            if (matchingEvent) {
+
+                select.value =
+                    matchingEvent.spreadsheetId ||
+                    matchingEvent.spreadsheetID ||
+                    matchingEvent.id ||
+                    matchingEvent.eventId ||
+                    "";
+
+
+                selectEvent();
+            }
+        }
+    }
+
+
+    /* =========================================================
+       SELECT EVENT
+    ========================================================= */
+
+    function selectEvent() {
+
+        console.log(
+            "CommunicationsCentre.selectEvent()"
+        );
+
+
+        const select =
+            document.getElementById(
+                "eventFilter"
+            );
+
 
         if (!select) {
             return;
@@ -6197,28 +6287,52 @@ window.CommunicationsCentre = (() => {
             select.value;
 
 
+        console.log(
+            "Selected event ID:",
+            selectedId
+        );
+
+
         if (!selectedId) {
 
             selectedEvent = null;
 
             hideAllModules();
 
+            const info =
+                document.getElementById(
+                    "selectedEventInfo"
+                );
+
+            if (info) {
+                info.innerHTML = "";
+            }
+
             return;
         }
 
 
         selectedEvent =
-            events.find(event => {
+            events.find(
+                event => {
 
-                const id =
-                    event.spreadsheetId ||
-                    event.id ||
-                    event.eventId ||
-                    "";
+                    const id =
+                        event.spreadsheetId ||
+                        event.spreadsheetID ||
+                        event.id ||
+                        event.eventId ||
+                        "";
 
-                return String(id) ===
-                       String(selectedId);
-            });
+                    return String(id) ===
+                           String(selectedId);
+                }
+            );
+
+
+        console.log(
+            "Selected event:",
+            selectedEvent
+        );
 
 
         if (!selectedEvent) {
@@ -6233,19 +6347,21 @@ window.CommunicationsCentre = (() => {
 
 
         /*
-         * Normalise the fields used throughout
-         * Communications Centre.
+         * Normalise event fields.
          */
         selectedEvent.spreadsheetId =
             selectedEvent.spreadsheetId ||
+            selectedEvent.spreadsheetID ||
             selectedEvent.id ||
             selectedEvent.eventId ||
             "";
+
 
         selectedEvent.eventName =
             getEventName(
                 selectedEvent
             );
+
 
         selectedEvent.eventDate =
             getEventDate(
@@ -6254,12 +6370,13 @@ window.CommunicationsCentre = (() => {
 
 
         /*
-         * Display selected event information.
+         * Display selected event.
          */
         const info =
             document.getElementById(
                 "selectedEventInfo"
             );
+
 
         if (info) {
 
@@ -6269,13 +6386,16 @@ window.CommunicationsCentre = (() => {
                         selectedEvent.eventName
                     )}
                 </strong>
+
                 ${
                     selectedEvent.eventDate
-                        ? `<span>
-                            ${escapeHtml(
-                                selectedEvent.eventDate
-                            )}
-                           </span>`
+                        ? `
+                            <span>
+                                ${escapeHtml(
+                                    selectedEvent.eventDate
+                                )}
+                            </span>
+                          `
                         : ""
                 }
             `;
@@ -6283,45 +6403,55 @@ window.CommunicationsCentre = (() => {
 
 
         /*
-         * Show activity/lifecycle areas.
+         * Show activity card.
          */
         const activityCard =
             document.getElementById(
                 "activityCard"
             );
 
+
         if (activityCard) {
+
             activityCard.style.display =
                 "block";
         }
 
 
+        /*
+         * Show lifecycle card.
+         */
         const lifecycleCard =
             document.getElementById(
                 "lifecycleCard"
             );
 
+
         if (lifecycleCard) {
+
             lifecycleCard.style.display =
                 "block";
         }
 
 
         /*
-         * Reset activity selection.
+         * Reset activity.
          */
         currentActivity = "";
+
 
         document
             .querySelectorAll(
                 ".activity-btn"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.classList.remove(
-                    "active"
-                );
-            });
+                    button.classList.remove(
+                        "active"
+                    );
+                }
+            );
 
 
         hideAllModules();
@@ -6331,25 +6461,33 @@ window.CommunicationsCentre = (() => {
 
 
     /* =========================================================
-       DATE HELPERS
+       EVENT DATE
     ========================================================= */
 
-    function parseEventDate(value) {
+    function parseEventDate(
+        value
+    ) {
 
         if (!value) {
             return null;
         }
 
+
         const date =
-            new Date(value);
+            new Date(
+                value
+            );
+
 
         if (
             Number.isNaN(
                 date.getTime()
             )
         ) {
+
             return null;
         }
+
 
         return date;
     }
@@ -6361,6 +6499,7 @@ window.CommunicationsCentre = (() => {
             return null;
         }
 
+
         const eventDate =
             parseEventDate(
                 getEventDate(
@@ -6368,20 +6507,29 @@ window.CommunicationsCentre = (() => {
                 )
             );
 
+
         if (!eventDate) {
             return null;
         }
 
+
         const now =
             new Date();
+
 
         const diff =
             eventDate.getTime() -
             now.getTime();
 
+
         return Math.ceil(
             diff /
-            (1000 * 60 * 60 * 24)
+            (
+                1000 *
+                60 *
+                60 *
+                24
+            )
         );
     }
 
@@ -6395,6 +6543,7 @@ window.CommunicationsCentre = (() => {
         if (!selectedEvent) {
             return;
         }
+
 
         const days =
             getDaysRemaining();
@@ -6412,8 +6561,8 @@ window.CommunicationsCentre = (() => {
 
 
         /*
-         * Reminder is available only within
-         * 7 days before the event.
+         * Reminder available only within
+         * 7 days before event.
          */
         if (
             days !== null &&
@@ -6459,7 +6608,8 @@ window.CommunicationsCentre = (() => {
 
 
         if (
-            activity === "reminder"
+            activity ===
+            "reminder"
         ) {
 
             const days =
@@ -6489,12 +6639,14 @@ window.CommunicationsCentre = (() => {
             .querySelectorAll(
                 ".activity-btn"
             )
-            .forEach(button => {
+            .forEach(
+                button => {
 
-                button.classList.remove(
-                    "active"
-                );
-            });
+                    button.classList.remove(
+                        "active"
+                    );
+                }
+            );
 
 
         const button =
@@ -6543,21 +6695,27 @@ window.CommunicationsCentre = (() => {
         ];
 
 
-        modules.forEach(id => {
+        modules.forEach(
+            id => {
 
-            const element =
-                document.getElementById(id);
+                const element =
+                    document.getElementById(
+                        id
+                    );
 
-            if (element) {
 
-                element.style.display =
-                    "none";
+                if (element) {
+
+                    element.style.display =
+                        "none";
+                }
             }
-        });
+        );
     }
 
 
     function hideModules() {
+
         hideAllModules();
     }
 
@@ -6578,13 +6736,16 @@ window.CommunicationsCentre = (() => {
                 "publicityModule"
             );
 
+
         if (module) {
+
             module.style.display =
                 "block";
         }
 
 
         publicityConfig = {
+
             spreadsheetId:
                 selectedEvent.spreadsheetId,
 
@@ -6599,6 +6760,7 @@ window.CommunicationsCentre = (() => {
                 ),
 
             message: "",
+
             attachmentName: ""
         };
 
@@ -6635,6 +6797,7 @@ window.CommunicationsCentre = (() => {
                         "ccPublicityMessage"
                     );
 
+
                 if (messageBox) {
 
                     messageBox.value =
@@ -6643,30 +6806,24 @@ window.CommunicationsCentre = (() => {
                 }
 
 
-                const attachment =
+                const name =
                     document.getElementById(
-                        "ccPublicityAttachment"
+                        "ccPublicityAttachmentName"
                     );
 
-                if (attachment) {
 
-                    const name =
-                        document.getElementById(
-                            "ccPublicityAttachmentName"
-                        );
+                if (name) {
 
-                    if (name) {
-
-                        name.textContent =
-                            publicityConfig
-                                .attachmentName ||
-                            "";
-                    }
+                    name.textContent =
+                        publicityConfig
+                            .attachmentName ||
+                        "";
                 }
             }
 
 
             await loadPublicityAudience();
+
 
         } catch (error) {
 
@@ -6690,7 +6847,8 @@ window.CommunicationsCentre = (() => {
                 "getPublicityAudience",
                 {
                     spreadsheetId:
-                        selectedEvent.spreadsheetId
+                        selectedEvent
+                            .spreadsheetId
                 }
             );
 
@@ -6729,6 +6887,7 @@ window.CommunicationsCentre = (() => {
                 "ccPublicityAudience"
             );
 
+
         if (!container) {
             return;
         }
@@ -6755,7 +6914,9 @@ window.CommunicationsCentre = (() => {
                 "ccPublicitySentCount"
             );
 
+
         if (sentCount) {
+
             sentCount.textContent =
                 sent;
         }
@@ -6766,7 +6927,9 @@ window.CommunicationsCentre = (() => {
                 "ccPublicityPendingCount"
             );
 
+
         if (pendingCount) {
+
             pendingCount.textContent =
                 pending;
         }
@@ -6775,7 +6938,10 @@ window.CommunicationsCentre = (() => {
         container.innerHTML =
             publicityAudience
                 .map(
-                    (person, index) => {
+                    (
+                        person,
+                        index
+                    ) => {
 
                         const status =
                             String(
@@ -6785,10 +6951,12 @@ window.CommunicationsCentre = (() => {
 
 
                         const isSent =
-                            status === "SENT";
+                            status ===
+                            "SENT";
 
 
                         return `
+
                             <div class="audience-row">
 
                                 <input
@@ -6818,8 +6986,16 @@ window.CommunicationsCentre = (() => {
                                     )}
                                 </div>
 
-                                <div class="audience-status ${isSent ? "sent" : "pending"}">
-                                    ${isSent ? "SENT" : "PENDING"}
+                                <div class="audience-status ${
+                                    isSent
+                                        ? "sent"
+                                        : "pending"
+                                }">
+                                    ${
+                                        isSent
+                                            ? "SENT"
+                                            : "PENDING"
+                                    }
                                 </div>
 
                                 <button
@@ -6884,6 +7060,7 @@ window.CommunicationsCentre = (() => {
         const person =
             publicityAudience[index];
 
+
         if (!person) {
             return;
         }
@@ -6910,6 +7087,7 @@ window.CommunicationsCentre = (() => {
 
         const person =
             publicityAudience[index];
+
 
         if (!person) {
             return;
@@ -6979,7 +7157,9 @@ window.CommunicationsCentre = (() => {
 
 
         window.open(
-            `https://wa.me/${phone}?text=${encodeURIComponent(personalised)}`,
+            `https://wa.me/${phone}?text=${encodeURIComponent(
+                personalised
+            )}`,
             "_blank"
         );
 
@@ -7014,8 +7194,10 @@ window.CommunicationsCentre = (() => {
             await API.post(
                 "savePublicityConfiguration",
                 {
+
                     spreadsheetId:
-                        selectedEvent.spreadsheetId,
+                        selectedEvent
+                            .spreadsheetId,
 
                     eventName:
                         getEventName(
@@ -7027,12 +7209,12 @@ window.CommunicationsCentre = (() => {
                             selectedEvent
                         ),
 
-                    message:
-                        message,
+                    message,
 
                     attachmentName:
                         publicityConfig
-                            .attachmentName || ""
+                            .attachmentName ||
+                        ""
                 }
             );
 
@@ -7069,6 +7251,7 @@ window.CommunicationsCentre = (() => {
         return await API.post(
             "preparePublicityWhatsApp",
             {
+
                 spreadsheetId:
                     selectedEvent
                         ?.spreadsheetId,
@@ -7124,6 +7307,7 @@ window.CommunicationsCentre = (() => {
                 `Send publicity to ${selected.length} selected person(s)?`
             )
         ) {
+
             return;
         }
 
@@ -7182,7 +7366,9 @@ window.CommunicationsCentre = (() => {
                 "reminderModule"
             );
 
+
         if (module) {
+
             module.style.display =
                 "block";
         }
@@ -7191,7 +7377,8 @@ window.CommunicationsCentre = (() => {
         reminderConfig = {
 
             spreadsheetId:
-                selectedEvent.spreadsheetId,
+                selectedEvent
+                    .spreadsheetId,
 
             eventName:
                 getEventName(
@@ -7259,7 +7446,9 @@ window.CommunicationsCentre = (() => {
         ) {
 
             reminderConfig = {
+
                 ...reminderConfig,
+
                 ...response.data
             };
         }
@@ -7289,6 +7478,7 @@ window.CommunicationsCentre = (() => {
             document.getElementById(
                 "ccReminderStageNotice"
             );
+
 
         if (!notice) {
             return;
@@ -7336,6 +7526,7 @@ window.CommunicationsCentre = (() => {
             await API.post(
                 "getReminderParticipants",
                 {
+
                     spreadsheetId:
                         selectedEvent
                             .spreadsheetId,
@@ -7381,6 +7572,7 @@ window.CommunicationsCentre = (() => {
                 "ccReminderParticipants"
             );
 
+
         if (!container) {
             return;
         }
@@ -7389,7 +7581,10 @@ window.CommunicationsCentre = (() => {
         container.innerHTML =
             participants
                 .map(
-                    (person, index) => {
+                    (
+                        person,
+                        index
+                    ) => {
 
                         const status =
                             String(
@@ -7399,10 +7594,12 @@ window.CommunicationsCentre = (() => {
 
 
                         const isSent =
-                            status === "SENT";
+                            status ===
+                            "SENT";
 
 
                         return `
+
                             <div class="participant-row">
 
                                 <input
@@ -7432,8 +7629,16 @@ window.CommunicationsCentre = (() => {
                                     )}
                                 </div>
 
-                                <div class="participant-status ${isSent ? "sent" : "pending"}">
-                                    ${isSent ? "SENT" : "PENDING"}
+                                <div class="participant-status ${
+                                    isSent
+                                        ? "sent"
+                                        : "pending"
+                                }">
+                                    ${
+                                        isSent
+                                            ? "SENT"
+                                            : "PENDING"
+                                    }
                                 </div>
 
                                 <button
@@ -7479,13 +7684,19 @@ window.CommunicationsCentre = (() => {
             determineDefaultReminderStage();
 
 
-        if (stage === "T-7") {
+        if (
+            stage ===
+            "T-7"
+        ) {
 
             return `Hi ${name}, just a reminder about the upcoming event. We look forward to seeing you!`;
         }
 
 
-        if (stage === "T-3") {
+        if (
+            stage ===
+            "T-3"
+        ) {
 
             return `Hi ${name}, our event is coming up soon. We hope you are able to join us!`;
         }
@@ -7501,6 +7712,7 @@ window.CommunicationsCentre = (() => {
 
         const person =
             participants[index];
+
 
         if (!person) {
             return;
@@ -7539,6 +7751,7 @@ window.CommunicationsCentre = (() => {
         return await API.post(
             "prepareReminderWhatsApp",
             {
+
                 spreadsheetId:
                     selectedEvent
                         ?.spreadsheetId,
@@ -7580,6 +7793,7 @@ window.CommunicationsCentre = (() => {
         const person =
             participants[index];
 
+
         if (!person) {
             return;
         }
@@ -7592,7 +7806,10 @@ window.CommunicationsCentre = (() => {
             ).toUpperCase();
 
 
-        if (status === "SENT") {
+        if (
+            status ===
+            "SENT"
+        ) {
 
             alert(
                 "This reminder has already been sent."
@@ -7631,7 +7848,9 @@ window.CommunicationsCentre = (() => {
 
 
         window.open(
-            `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+            `https://wa.me/${phone}?text=${encodeURIComponent(
+                message
+            )}`,
             "_blank"
         );
 
@@ -7681,6 +7900,7 @@ window.CommunicationsCentre = (() => {
                 `Send reminder to ${selected.length} selected person(s)?`
             )
         ) {
+
             return;
         }
 
@@ -7781,24 +8001,25 @@ window.CommunicationsCentre = (() => {
             }
 
 
-            /*
-             * Update local state immediately.
-             */
             if (
-                type === "PUBLICITY"
+                type ===
+                "PUBLICITY"
             ) {
 
                 person.publicityStatus =
                     "SENT";
 
+
                 renderPublicityAudience();
 
             } else if (
-                type === "REMINDER"
+                type ===
+                "REMINDER"
             ) {
 
                 person.reminderStatus =
                     "SENT";
+
 
                 renderParticipants();
             }
@@ -7810,6 +8031,7 @@ window.CommunicationsCentre = (() => {
                 "markCommunicationSent:",
                 error
             );
+
 
             alert(
                 error.message ||
@@ -7833,6 +8055,7 @@ window.CommunicationsCentre = (() => {
             )
             .forEach(
                 checkbox => {
+
                     checkbox.checked =
                         checked;
                 }
@@ -7850,6 +8073,7 @@ window.CommunicationsCentre = (() => {
             )
             .forEach(
                 checkbox => {
+
                     checkbox.checked =
                         checked;
                 }
@@ -7943,7 +8167,7 @@ window.CommunicationsCentre = (() => {
             person?.name ||
             person?.Name ||
             person?.fullName ||
-            person?.fullName ||
+            person?.FullName ||
             ""
         );
     }
@@ -8036,7 +8260,10 @@ window.CommunicationsCentre = (() => {
     ) {
 
         people.sort(
-            (a, b) =>
+            (
+                a,
+                b
+            ) =>
                 getPersonName(a)
                     .localeCompare(
                         getPersonName(b)
@@ -8051,6 +8278,7 @@ window.CommunicationsCentre = (() => {
 
         return (
             event?.eventName ||
+            event?.event_name ||
             event?.name ||
             event?.Name ||
             ""
@@ -8064,6 +8292,7 @@ window.CommunicationsCentre = (() => {
 
         return (
             event?.eventDate ||
+            event?.event_date ||
             event?.date ||
             event?.Date ||
             ""
@@ -8102,7 +8331,7 @@ window.CommunicationsCentre = (() => {
 
 
     /* =========================================================
-       INITIALISE
+       INITIALISE ATTACHMENT
     ========================================================= */
 
     initialiseAttachmentListener();
