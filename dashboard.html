@@ -283,6 +283,14 @@
       background: #ca8a04;
     }
 
+    #eventManagementModule .em-deleteBtn {
+  background: #991b1b;
+}
+
+#eventManagementModule .em-deleteBtn:hover {
+  background: #7f1d1d;
+}
+
     #eventManagementModule .em-tableCard {
       background: white;
       border-radius: 10px;
@@ -3996,6 +4004,27 @@ window.EventManagement = (function () {
 
             }
 
+            ${
+  user?.role === "Admin"
+
+  ?
+
+  `<button
+    type="button"
+    class="em-actionBtn em-deleteBtn"
+    onclick="EventManagement.deleteEvent('${spreadsheetId}')"
+  >
+
+    Delete
+
+  </button>`
+
+  :
+
+  ""
+
+}
+
           </td>
 
         `;
@@ -4608,6 +4637,144 @@ window.EventManagement = (function () {
 
   }
 
+  
+/* =======================================================
+   DELETE EVENT
+======================================================= */
+
+async function deleteEvent(id) {
+
+  /*
+   * Frontend protection
+   */
+  if (user?.role !== "Admin") {
+
+    alert(
+      "Only administrators can delete events."
+    );
+
+    return;
+
+  }
+
+
+  const event =
+    events.find(
+      e =>
+        String(
+          e.spreadsheetId || ""
+        ) === String(id)
+    );
+
+
+  const eventName =
+    event?.eventName ||
+    "this event";
+
+
+  const confirmed =
+    confirm(
+      "DELETE EVENT?\n\n" +
+
+      "Event: " +
+      eventName +
+      "\n\n" +
+
+      "This will permanently delete the event.\n" +
+
+      "This action cannot be undone.\n\n" +
+
+      "Are you sure?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  /*
+   * Second confirmation
+   * for destructive action.
+   */
+
+  const finalConfirmed =
+    confirm(
+      "FINAL CONFIRMATION\n\n" +
+
+      "You are about to permanently delete:\n\n" +
+
+      eventName +
+      "\n\n" +
+
+      "Continue?"
+    );
+
+
+  if (!finalConfirmed) {
+
+    return;
+
+  }
+
+
+  showLoading();
+
+
+  try {
+
+    await runScript(
+      "deleteEvent",
+      {
+        spreadsheetId:
+          id,
+
+        deletedBy:
+          user?.email || ""
+
+      }
+    );
+
+
+    alert(
+      "Event deleted successfully."
+    );
+
+
+    /*
+     * Refresh Event Management
+     */
+
+    await loadEvents();
+
+  }
+
+
+  catch (err) {
+
+    console.error(
+      "deleteEvent:",
+      err
+    );
+
+
+    alert(
+      err.message ||
+      "Unable to delete event."
+    );
+
+  }
+
+
+  finally {
+
+    hideLoading();
+
+  }
+
+}
 
 
   /* =======================================================
@@ -4802,7 +4969,10 @@ window.EventManagement = (function () {
       closeEvent,
 
     reopenEvent:
-      reopenEvent
+      reopenEvent,
+
+  deleteEvent:
+    deleteEvent
 
   };
 
