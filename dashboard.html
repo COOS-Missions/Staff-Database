@@ -2719,7 +2719,7 @@ function showSection(id) {
 }
 
   if (id === "communications") {
-    CommunicationsCentre.init();
+    CommunicationsCentre.cinit();
 }
 
 
@@ -5974,6 +5974,33 @@ let reminderConfig = {};
 
 let publicityConfig = {};
 
+  async function cinit() {
+
+    /*
+     * The dashboard can call showSection('events')
+     * multiple times.
+     *
+     * Do not create duplicate listeners.
+     */
+
+    if (!initialised) {
+
+      bindEvents();
+
+      initialised = true;
+
+    }
+
+
+    /*
+     * Refresh the event data every time the user
+     * opens Event Management.
+     */
+
+    await loadEvents();
+
+  }
+
 
 /* =========================================================
    URL PARAMETERS
@@ -9196,7 +9223,7 @@ function escapeHtml(
 
 }
 return {
-        init,
+        cinit,
         loadEvents,
         selectEvent,
         selectActivity,
