@@ -5956,979 +5956,2064 @@ async function deleteEvent(id) {
 
 window.CommunicationsCentre = (() => {
 
-    let events = [];
-    let selectedEvent = null;
-    let currentActivity = "";
-    let participants = [];
-    let publicityAudience = [];
-    let reminderConfig = {};
-    let publicityConfig = {};
+    /* =========================================================
+   GLOBAL STATE
+========================================================= */
 
-    let initialised = false;
+let events = [];
 
+let selectedEvent = null;
 
-    /* =====================================================
-       INITIALISE
-       ===================================================== */
+let currentActivity = "";
 
-    async function init() {
+let participants = [];
 
-        if (!initialised) {
-            bindEvents();
-            initialised = true;
-        }
+let publicityAudience = [];
 
-        await loadEvents();
-    }
+let reminderConfig = {};
+
+let publicityConfig = {};
 
 
-    /* =====================================================
-       EVENT BINDINGS
-       ===================================================== */
+/* =========================================================
+   URL PARAMETERS
+========================================================= */
 
-    function bindEvents() {
+const params =
+    new URLSearchParams(
+        window.location.search
+    );
 
-        const attachment =
-            document.getElementById("ccPublicityAttachment");
-
-        if (attachment) {
-
-            attachment.addEventListener("change", handleAttachmentChange);
-
-        }
-
-    }
+const presetEvent =
+    params.get("event");
 
 
-    /* =====================================================
-       LOAD EVENTS
-       ===================================================== */
+/* =========================================================
+   LOAD EVENTS
+========================================================= */
 
-    async function loadEvents() {
+async function loadEvents(){
 
-        const select =
-            document.getElementById("ccEventFilter");
+    try{
 
-        if (!select) return;
-
-        select.innerHTML =
-            `<option value="">Loading events...</option>`;
-
-        try {
-
-            const result =
-                await API.post("getEventList", {});
-
-            if (!result.success) {
-                throw new Error(
-                    result.message || "Unable to load events."
-                );
-            }
-
-            events = (result.data || [])
-                .filter(event =>
-                    String(event.status || event.Status || "")
-                        .toUpperCase() === "ACTIVE"
-                );
-
-            populateEventDropdown();
-
-        } catch (error) {
-
-            console.error(
-                "Communications loadEvents error:",
-                error
+        const response =
+            await API.post(
+                "getEventList",
+                {}
             );
 
-            select.innerHTML =
-                `<option value="">Unable to load events</option>`;
+        if(!response.success){
+
+            throw new Error(
+                response.message ||
+                "Unable to load events"
+            );
+
+        }
+
+        events =
+            response.data ||
+            response.result ||
+            [];
+
+        /*
+            Communications Centre only works
+            with ACTIVE events.
+        */
+
+        events =
+            events.filter(
+                e =>
+                    String(
+                        e.status ||
+                        e.Status ||
+                        ""
+                    )
+                    .toUpperCase()
+                    ===
+                    "ACTIVE"
+            );
+
+        populateEventDropdown();
+
+        if(events.length === 0){
+
+            document.getElementById(
+                "selectedEventInfo"
+            ).innerHTML =
+            `
+                <div class="empty">
+
+                    No active events are currently
+                    available for communication.
+
+                </div>
+            `;
 
         }
 
     }
+    catch(err){
+
+        console.error(
+            "loadEvents error:",
+            err
+        );
+
+        document.getElementById(
+            "selectedEventInfo"
+        ).innerHTML =
+        `
+            <div class="notice">
+
+                Unable to load active events.
+
+                <br><br>
+
+                ${escapeHtml(
+                    err.message || ""
+                )}
+
+            </div>
+        `;
+
+    }
+
+}
 
 
-    /* =====================================================
-       POPULATE EVENT DROPDOWN
-       ===================================================== */
+/* =========================================================
+   POPULATE EVENT DROPDOWN
+========================================================= */
 
-    function populateEventDropdown() {
+function populateEventDropdown(){
 
-        const select =
-            document.getElementById("ccEventFilter");
+    const select =
+        document.getElementById(
+            "eventFilter"
+        );
 
-        if (!select) return;
+    select.innerHTML =
+    `
+        <option value="">
+            Select Event
+        </option>
+    `;
 
-        select.innerHTML =
-            `<option value="">Select an active event...</option>`;
+    events.forEach(
+        e => {
 
-        events.forEach((event, index) => {
+            const id =
+                e.spreadsheetId ||
+                e.SpreadsheetId ||
+                e.id ||
+                e.eventId;
 
-            const spreadsheetId =
-                event.spreadsheetId ||
-                event.SpreadsheetId ||
-                event["Source Spreadsheet ID"] ||
+            const name =
+                e.eventName ||
+                e.EventName ||
+                e.name ||
                 "";
 
-            const eventName =
-                event.eventName ||
-                event.EventName ||
-                event.name ||
-                event["Event Name"] ||
-                "Unnamed Event";
-
-            const eventDate =
-                event.eventDate ||
-                event.EventDate ||
-                event.date ||
+            const date =
+                e.eventDate ||
+                e.EventDate ||
+                e.date ||
                 "";
 
             const option =
-                document.createElement("option");
-
-            option.value = index;
-
-            option.textContent =
-                eventName +
-                (eventDate ? ` — ${eventDate}` : "");
-
-            option.dataset.spreadsheetId =
-                spreadsheetId;
-
-            select.appendChild(option);
-
-        });
-
-    }
-
-
-    /* =====================================================
-       SELECT EVENT
-       ===================================================== */
-
-    function selectEvent() {
-
-        const select =
-            document.getElementById("ccEventFilter");
-
-        const index =
-            select ? select.value : "";
-
-        hideModules();
-
-        if (index === "") {
-
-            selectedEvent = null;
-
-            document
-                .getElementById("ccLifecycleCard")
-                ?.classList.add("hidden");
-
-            document
-                .getElementById("ccActivityCard")
-                ?.classList.add("hidden");
-
-            document
-                .getElementById("ccSelectedEventInfo")
-                ?.classList.add("hidden");
-
-            return;
-        }
-
-        selectedEvent =
-            events[Number(index)];
-
-        if (!selectedEvent) return;
-
-        const eventName =
-            getEventName(selectedEvent);
-
-        const eventDate =
-            getEventDate(selectedEvent);
-
-        const info =
-            document.getElementById("ccSelectedEventInfo");
-
-        if (info) {
-
-            info.innerHTML = `
-                <strong>${escapeHtml(eventName)}</strong>
-                ${eventDate
-                    ? `<br>${escapeHtml(eventDate)}`
-                    : ""}
-            `;
-
-            info.classList.remove("hidden");
-
-        }
-
-        document
-            .getElementById("ccLifecycleCard")
-            ?.classList.remove("hidden");
-
-        document
-            .getElementById("ccActivityCard")
-            ?.classList.remove("hidden");
-
-        updateLifecycleStatus();
-
-    }
-
-
-    /* =====================================================
-       ACTIVITY
-       ===================================================== */
-
-    async function selectActivity(activity) {
-
-        if (!selectedEvent) return;
-
-        currentActivity = activity;
-
-        hideModules();
-
-        if (activity === "publicity") {
-
-            document
-                .getElementById("ccPublicityModule")
-                ?.classList.remove("hidden");
-
-            await loadPublicity();
-
-            return;
-        }
-
-
-        if (activity === "reminder") {
-
-            if (!isReminderAvailable()) {
-
-                alert(
-                    "Reminder is only available from T-7 to T-0."
+                document.createElement(
+                    "option"
                 );
 
-                return;
+            option.value = id;
 
-            }
+            option.textContent =
+                `${name} - ${date}`;
 
-            document
-                .getElementById("ccReminderModule")
-                ?.classList.remove("hidden");
-
-            await loadReminder();
+            select.appendChild(
+                option
+            );
 
         }
+    );
+
+    if(presetEvent){
+
+        select.value =
+            presetEvent;
+
+        selectEvent();
+
+    }
+
+}
+
+
+/* =========================================================
+   SELECT EVENT
+========================================================= */
+
+async function selectEvent(){
+
+    const eventId =
+        document.getElementById(
+            "eventFilter"
+        ).value;
+
+    if(!eventId){
+
+        selectedEvent = null;
+
+        currentActivity = "";
+
+        hideAllModules();
+
+        return;
+
+    }
+
+    selectedEvent =
+        events.find(
+            e =>
+                String(
+                    e.spreadsheetId ||
+                    e.SpreadsheetId ||
+                    e.id ||
+                    e.eventId
+                )
+                ===
+                String(eventId)
+        );
+
+    if(!selectedEvent)
+        return;
+
+
+    /*
+        NORMALISE EVENT
+    */
+
+    selectedEvent.spreadsheetId =
+        selectedEvent.spreadsheetId ||
+        selectedEvent.SpreadsheetId ||
+        selectedEvent.id ||
+        selectedEvent.eventId;
+
+    selectedEvent.eventName =
+        selectedEvent.eventName ||
+        selectedEvent.EventName ||
+        selectedEvent.name ||
+        "";
+
+    selectedEvent.eventDate =
+        selectedEvent.eventDate ||
+        selectedEvent.EventDate ||
+        selectedEvent.date ||
+        "";
+
+    selectedEvent.status =
+        selectedEvent.status ||
+        selectedEvent.Status ||
+        "ACTIVE";
+
+
+    /*
+        DISPLAY EVENT
+    */
+
+    document.getElementById(
+        "selectedEventInfo"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+        "selectedEventInfo"
+    ).innerHTML =
+    `
+        <div class="event-info">
+
+            <div class="event-title">
+
+                ${escapeHtml(
+                    selectedEvent.eventName
+                )}
+
+            </div>
+
+            <br>
+
+            📅
+            ${escapeHtml(
+                selectedEvent.eventDate
+            )}
+
+            <br>
+
+            📌 Status:
+
+            <span class="badge badge-green">
+                ACTIVE
+            </span>
+
+        </div>
+    `;
+
+
+    document.getElementById(
+        "activityCard"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+        "lifecycleCard"
+    ).classList.remove("hidden");
+
+
+    currentActivity = "";
+
+
+    document
+        .querySelectorAll(
+            ".activity-button"
+        )
+        .forEach(
+            btn =>
+                btn.classList.remove("active")
+        );
+
+
+    hideModules();
+
+    updateLifecycleStatus();
+
+}
+
+
+/* =========================================================
+   EVENT DATE
+========================================================= */
+
+function getDaysRemaining(){
+
+    if(!selectedEvent)
+        return null;
+
+
+    const eventDate =
+        parseEventDate(
+            selectedEvent.eventDate
+        );
+
+
+    if(!eventDate)
+        return null;
+
+
+    eventDate.setHours(
+        0,0,0,0
+    );
+
+
+    const today =
+        new Date();
+
+    today.setHours(
+        0,0,0,0
+    );
+
+
+    return Math.ceil(
+        (
+            eventDate -
+            today
+        )
+        /
+        (
+            1000 *
+            60 *
+            60 *
+            24
+        )
+    );
+
+}
+
+
+/* =========================================================
+   EVENT DATE PARSER
+========================================================= */
+
+function parseEventDate(value){
+
+    if(!value)
+        return null;
+
+
+    if(
+        Object.prototype.toString.call(value)
+        ===
+        "[object Date]"
+    ){
+
+        return new Date(
+            value.getTime()
+        );
 
     }
 
 
-    /* =====================================================
-       LIFECYCLE
-       ===================================================== */
+    const date =
+        new Date(value);
 
-    function updateLifecycleStatus() {
 
-        const container =
-            document.getElementById("ccLifecycleStatus");
+    if(!isNaN(date.getTime()))
+        return date;
 
-        if (!container || !selectedEvent) return;
 
-        const days =
-            getDaysRemaining();
+    /*
+        Handle DD/MM/YYYY if required.
+    */
 
-        const reminderAvailable =
-            days >= 0 && days <= 7;
+    const match =
+        String(value)
+        .match(
+            /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/
+        );
 
-        container.innerHTML = `
 
-            <div class="cc-event-info">
+    if(match){
 
-                <strong>Publicity</strong>
+        const day =
+            Number(match[1]);
 
-                <span style="margin-left:10px;">
+        const month =
+            Number(match[2]) - 1;
+
+        const year =
+            Number(match[3]);
+
+        const parsed =
+            new Date(
+                year,
+                month,
+                day
+            );
+
+        if(!isNaN(parsed.getTime()))
+            return parsed;
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =========================================================
+   REMINDER AVAILABILITY
+========================================================= */
+
+function getReminderAvailability(){
+
+    const days =
+        getDaysRemaining();
+
+
+    if(days === null){
+
+        return {
+
+            available:false,
+
+            reason:
+                "Event date unavailable."
+
+        };
+
+    }
+
+
+    if(days < 0){
+
+        return {
+
+            available:false,
+
+            reason:
+                "Event has already taken place."
+
+        };
+
+    }
+
+
+    if(days <= 7){
+
+        return {
+
+            available:true,
+
+            reason:
+                "Reminder communication is available."
+
+        };
+
+    }
+
+
+    return {
+
+        available:false,
+
+        reason:
+            `Reminder will become available when the event is within 7 days. ${days} days remaining.`
+
+    };
+
+}
+
+
+/* =========================================================
+   LIFECYCLE STATUS
+========================================================= */
+
+function updateLifecycleStatus(){
+
+    if(!selectedEvent)
+        return;
+
+
+    const days =
+        getDaysRemaining();
+
+
+    const reminder =
+        getReminderAvailability();
+
+
+    let reminderText = "";
+
+
+    if(days === null){
+
+        reminderText =
+            "Event date unavailable.";
+
+    }
+    else if(days > 7){
+
+        reminderText =
+            `Reminder not yet available — ${days} days until event.`;
+
+    }
+    else if(days === 7){
+
+        reminderText =
+            "T-7 reminder is now available.";
+
+    }
+    else if(days > 3){
+
+        reminderText =
+            "Reminder window is active. T-7 is available.";
+
+    }
+    else if(days === 3){
+
+        reminderText =
+            "T-3 reminder is now available.";
+
+    }
+    else if(days > 1){
+
+        reminderText =
+            "Reminder window is active.";
+
+    }
+    else if(days === 1){
+
+        reminderText =
+            "T-1 reminder is now available.";
+
+    }
+    else{
+
+        reminderText =
+            "Event is today.";
+
+    }
+
+
+    document.getElementById(
+        "lifecycleStatus"
+    ).innerHTML =
+    `
+        <div class="status-panel">
+
+            <div class="status-row">
+
+                <strong>
+                    📢 Publicity
+                </strong>
+
+                <span class="badge badge-green">
                     AVAILABLE
                 </span>
 
             </div>
 
-            <div class="cc-event-info">
 
-                <strong>Reminder</strong>
+            <div class="status-row">
 
-                <span style="margin-left:10px;">
+                <strong>
+                    ⏰ Reminder
+                </strong>
+
+                <span class="badge ${
+                    reminder.available
+                    ? "badge-green"
+                    : "badge-yellow"
+                }">
+
                     ${
-                        reminderAvailable
-                            ? "AVAILABLE"
-                            : "NOT AVAILABLE"
+                        reminder.available
+                        ? "AVAILABLE"
+                        : "NOT YET AVAILABLE"
                     }
+
                 </span>
 
             </div>
 
-        `;
 
-        const reminderText =
-            document.getElementById(
-                "ccReminderAvailabilityText"
-            );
+            <div class="status-row">
 
-        if (reminderText) {
+                <strong>
+                    Event
+                </strong>
 
-            reminderText.textContent =
-                reminderAvailable
-                    ? "Available for this event"
-                    : "Available from T-7";
+                <span>
 
-        }
+                    ${
+                        days === 0
+                        ? "Today"
+                        : days > 0
+                        ? `${days} days remaining`
+                        : "Event completed"
+                    }
+
+                </span>
+
+            </div>
+
+        </div>
+    `;
+
+
+    document.getElementById(
+        "reminderAvailabilityText"
+    ).textContent =
+        reminderText;
+
+
+    const reminderButton =
+        document.getElementById(
+            "reminderActivityButton"
+        );
+
+
+    if(reminder.available){
+
+        reminderButton.classList.remove(
+            "disabled"
+        );
+
+    }
+    else{
+
+        reminderButton.classList.add(
+            "disabled"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   ACTIVITY
+========================================================= */
+
+async function selectActivity(activity){
+
+    if(!selectedEvent){
+
+        alert(
+            "Please select an event first."
+        );
+
+        return;
 
     }
 
 
-    /* =====================================================
-       PUBLICITY
-       ===================================================== */
+    if(activity === "reminder"){
 
-    async function loadPublicity() {
+        const availability =
+            getReminderAvailability();
 
-        if (!selectedEvent) return;
 
-        const eventName =
-            getEventName(selectedEvent);
-
-        const eventDate =
-            getEventDate(selectedEvent);
-
-        setText(
-            "ccPublicityEventName",
-            eventName
-        );
-
-        setText(
-            "ccPublicityEventDate",
-            eventDate
-        );
-
-        const spreadsheetId =
-            getSpreadsheetId(selectedEvent);
-
-        try {
-
-            const result =
-                await API.post(
-                    "getPublicityConfiguration",
-                    {
-                        data: JSON.stringify({
-                            spreadsheetId
-                        })
-                    }
-                );
-
-            if (result.success) {
-
-                publicityConfig =
-                    result.data || {};
-
-                setValue(
-                    "ccPublicityMessage",
-                    publicityConfig.message || ""
-                );
-
-                setText(
-                    "ccAttachmentName",
-                    publicityConfig.attachmentName || ""
-                );
-
-            }
-
-            await loadPublicityAudience();
-
-        } catch (error) {
-
-            console.error(
-                "loadPublicity error:",
-                error
-            );
+        if(!availability.available){
 
             alert(
-                "Unable to load publicity configuration."
+                availability.reason
             );
+
+            return;
 
         }
 
     }
 
 
-    async function loadPublicityAudience() {
+    currentActivity =
+        activity;
 
-        const spreadsheetId =
-            getSpreadsheetId(selectedEvent);
 
-        const result =
+    document
+        .querySelectorAll(
+            ".activity-button"
+        )
+        .forEach(
+            btn =>
+                btn.classList.remove("active")
+        );
+
+
+    hideModules();
+
+
+    if(activity === "publicity"){
+
+        document
+            .getElementById(
+                "publicityActivityButton"
+            )
+            .classList.add("active");
+
+
+        document
+            .getElementById(
+                "publicityModule"
+            )
+            .classList.remove("hidden");
+
+
+        await loadPublicity();
+
+    }
+
+
+    if(activity === "reminder"){
+
+        document
+            .getElementById(
+                "reminderActivityButton"
+            )
+            .classList.add("active");
+
+
+        document
+            .getElementById(
+                "reminderModule"
+            )
+            .classList.remove("hidden");
+
+
+        await loadReminder();
+
+    }
+
+}
+
+
+/* =========================================================
+   HIDE MODULES
+========================================================= */
+
+function hideModules(){
+
+    document
+        .getElementById(
+            "publicityModule"
+        )
+        .classList.add("hidden");
+
+
+    document
+        .getElementById(
+            "reminderModule"
+        )
+        .classList.add("hidden");
+
+}
+
+
+function hideAllModules(){
+
+    document
+        .getElementById(
+            "activityCard"
+        )
+        .classList.add("hidden");
+
+
+    document
+        .getElementById(
+            "lifecycleCard"
+        )
+        .classList.add("hidden");
+
+
+    hideModules();
+
+}
+
+
+/* =========================================================
+   PUBLICITY
+========================================================= */
+
+async function loadPublicity(){
+
+    if(!selectedEvent)
+        return;
+
+
+    publicityConfig = {
+
+        spreadsheetId:
+            selectedEvent.spreadsheetId,
+
+        eventName:
+            selectedEvent.eventName,
+
+        eventDate:
+            selectedEvent.eventDate,
+
+        message:
+            ""
+
+    };
+
+
+    document.getElementById(
+        "publicityEventName"
+    ).textContent =
+        selectedEvent.eventName;
+
+
+    document.getElementById(
+        "publicityEventDate"
+    ).textContent =
+        "📅 " +
+        selectedEvent.eventDate;
+
+
+    /*
+        IMPORTANT:
+
+        GS expects:
+
+        e.parameter.data
+
+        containing JSON.
+    */
+
+    try{
+
+        const response =
             await API.post(
-                "getPublicityAudience",
+                "getPublicityConfiguration",
                 {
-                    spreadsheetId
+                    data:
+                        JSON.stringify({
+
+                            spreadsheetId:
+                                selectedEvent.spreadsheetId
+
+                        })
                 }
             );
 
-        if (!result.success) {
+
+        if(
+            response.success &&
+            response.data
+        ){
+
+            publicityConfig = {
+
+                ...publicityConfig,
+
+                ...response.data
+
+            };
+
+
+            document.getElementById(
+                "publicityMessage"
+            ).value =
+                publicityConfig.message || "";
+
+
+            document.getElementById(
+                "attachmentName"
+            ).textContent =
+                publicityConfig.attachmentName
+                    ?
+                    `Saved poster: ${publicityConfig.attachmentName}`
+                    :
+                    "";
+
+        }
+
+    }
+    catch(err){
+
+        console.warn(
+            "Unable to load publicity configuration:",
+            err
+        );
+
+    }
+
+
+    await loadPublicityAudience();
+
+}
+
+
+/* =========================================================
+   PUBLICITY AUDIENCE
+========================================================= */
+
+async function loadPublicityAudience(){
+
+    if(!selectedEvent)
+        return;
+
+
+    try{
+
+        const response =
+            await API.post(
+                "getPublicityAudience",
+                {
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId
+                }
+            );
+
+
+        if(!response.success){
 
             throw new Error(
-                result.message ||
-                "Unable to load publicity audience."
+                response.message ||
+                "Unable to load publicity audience"
             );
 
         }
 
+
         publicityAudience =
-            dedupePeople(result.data || []);
+            response.data || [];
+
+
+        publicityAudience =
+            deduplicatePeople(
+                publicityAudience
+            );
+
 
         renderPublicityAudience();
 
     }
+    catch(err){
+
+        console.error(err);
 
 
-    function renderPublicityAudience() {
+        document.getElementById(
+            "publicityTable"
+        ).innerHTML =
+        `
+            <tr>
 
-        const tbody =
-            document.getElementById(
-                "ccPublicityTable"
-            );
+                <td colspan="6">
 
-        if (!tbody) return;
+                    <div class="empty">
 
-        let sent = 0;
-        let pending = 0;
-        let registered = 0;
+                        Unable to load publicity audience.
 
-        publicityAudience
-            .forEach(person => {
+                        <br><br>
 
-                const status =
-                    String(
-                        person.publicityStatus ||
-                        person.PublicityStatus ||
-                        person.status ||
-                        "PENDING"
-                    ).toUpperCase();
+                        ${escapeHtml(
+                            err.message || ""
+                        )}
 
-                if (status === "SENT") {
-                    sent++;
-                } else {
-                    pending++;
-                }
+                    </div>
 
-                if (
-                    person.registered === true ||
-                    String(person.registered)
-                        .toLowerCase() === "true"
-                ) {
-                    registered++;
-                }
+                </td>
 
-            });
+            </tr>
+        `;
+
+    }
+
+}
 
 
-        setText(
-            "ccPublicityTotal",
-            publicityAudience.length
-        );
+/* =========================================================
+   RENDER PUBLICITY
+========================================================= */
 
-        setText(
-            "ccPublicitySent",
-            sent
-        );
+function renderPublicityAudience(){
 
-        setText(
-            "ccPublicityPending",
-            pending
-        );
-
-        setText(
-            "ccPublicityRegistered",
-            registered
+    const table =
+        document.getElementById(
+            "publicityTable"
         );
 
 
-        if (!publicityAudience.length) {
+    table.innerHTML = "";
 
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align:center;">
-                        No participants found.
-                    </td>
-                </tr>
-            `;
 
-            return;
+    publicityAudience.sort(
+        sortByName
+    );
+
+
+    let sent = 0;
+
+    let pending = 0;
+
+    let registered = 0;
+
+
+    publicityAudience.forEach(
+        p => {
+
+            const status =
+                String(
+                    p.publicityStatus ||
+                    p.PublicityStatus ||
+                    "PENDING"
+                )
+                .toUpperCase();
+
+
+            if(status === "SENT")
+                sent++;
+
+            else
+                pending++;
+
+
+            const engagement =
+                String(
+                    p.engagement ||
+                    p.Engagement ||
+                    ""
+                )
+                .toLowerCase();
+
+
+            if(
+                engagement === "registered"
+            ){
+
+                registered++;
+
+            }
+
         }
+    );
 
 
-        publicityAudience.sort(sortByName);
+    document.getElementById(
+        "publicityTotal"
+    ).textContent =
+        publicityAudience.length;
 
 
-        tbody.innerHTML =
-            publicityAudience.map(
-                (person, index) => {
-
-                    const name =
-                        getPersonName(person);
-
-                    const mobile =
-                        getPersonMobile(person);
-
-                    const status =
-                        String(
-                            person.publicityStatus ||
-                            person.PublicityStatus ||
-                            "PENDING"
-                        ).toUpperCase();
-
-                    const registered =
-                        person.registered === true ||
-                        String(person.registered)
-                            .toLowerCase() === "true";
+    document.getElementById(
+        "publicitySent"
+    ).textContent =
+        sent;
 
 
-                    return `
-
-                        <tr>
-
-                            <td>
-
-                                <input
-                                    type="checkbox"
-                                    class="cc-publicity-check"
-                                    data-index="${index}"
-                                    ${status === "SENT"
-                                        ? "disabled"
-                                        : ""}>
-
-                            </td>
+    document.getElementById(
+        "publicityPending"
+    ).textContent =
+        pending;
 
 
-                            <td>
-                                ${escapeHtml(name)}
-                            </td>
+    document.getElementById(
+        "publicityRegistered"
+    ).textContent =
+        registered;
 
 
-                            <td>
-                                ${escapeHtml(mobile)}
-                            </td>
+    if(
+        publicityAudience.length === 0
+    ){
 
+        table.innerHTML =
+        `
+            <tr>
 
-                            <td>
-                                ${registered
-                                    ? "Registered"
-                                    : "Not Registered"}
-                            </td>
+                <td colspan="6">
 
+                    <div class="empty">
 
-                            <td>
-                                ${status}
-                            </td>
+                        No publicity audience found.
 
+                    </div>
 
-                            <td>
+                </td>
 
-                                <div class="cc-button-row">
+            </tr>
+        `;
 
-                                    <button
-                                        type="button"
-                                        class="cc-preview"
-                                        onclick="CommunicationsCentre.previewPublicityPerson(${index})">
-
-                                        Preview
-
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        class="cc-whatsapp"
-                                        onclick="CommunicationsCentre.openManualPublicityWhatsApp(${index})"
-                                        ${status === "SENT"
-                                            ? "disabled"
-                                            : ""}>
-
-                                        WhatsApp
-
-                                    </button>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    `;
-
-                }
-            ).join("");
+        return;
 
     }
 
 
-    async function savePublicityConfiguration() {
+    publicityAudience.forEach(
+        (p,index) => {
 
-        if (!selectedEvent) return;
-
-        const data = {
-
-            spreadsheetId:
-                getSpreadsheetId(selectedEvent),
-
-            eventName:
-                getEventName(selectedEvent),
-
-            eventDate:
-                getEventDate(selectedEvent),
-
-            message:
-                getValue("ccPublicityMessage"),
-
-            attachmentName:
-                getValue(
-                    "ccAttachmentName"
+            const status =
+                String(
+                    p.publicityStatus ||
+                    p.PublicityStatus ||
+                    "PENDING"
                 )
+                .toUpperCase();
 
-        };
 
-        const result =
-            await API.post(
-                "savePublicityConfiguration",
-                data
-            );
+            let statusClass =
+                "badge-yellow";
 
-        if (!result.success) {
 
-            alert(
-                result.message ||
-                "Unable to save publicity configuration."
-            );
+            if(status === "SENT")
+                statusClass =
+                    "badge-green";
 
-            return;
+
+            if(status === "FAILED")
+                statusClass =
+                    "badge-red";
+
+
+            const name =
+                getPersonName(p);
+
+
+            const mobile =
+                getPersonMobile(p);
+
+
+            const engagement =
+                p.engagement ||
+                p.Engagement ||
+                "Not Registered";
+
+
+            table.innerHTML +=
+            `
+                <tr>
+
+                    <td>
+
+                        <input
+                            type="checkbox"
+                            class="publicityCheck"
+                            value="${index}"
+                            ${
+                                status === "SENT"
+                                ? "disabled"
+                                : ""
+                            }
+                        >
+
+                    </td>
+
+
+                    <td>
+                        ${escapeHtml(name)}
+                    </td>
+
+
+                    <td>
+                        ${escapeHtml(mobile)}
+                    </td>
+
+
+                    <td>
+
+                        <span class="badge ${statusClass}">
+                            ${escapeHtml(status)}
+                        </span>
+
+                    </td>
+
+
+                    <td>
+
+                        <span class="badge badge-blue">
+                            ${escapeHtml(engagement)}
+                        </span>
+
+                    </td>
+
+
+                    <td>
+
+                        <button
+                            class="preview"
+                            onclick="previewPublicityPerson(${index})">
+
+                            Preview
+
+                        </button>
+
+
+                        ${
+                            status !== "SENT"
+
+                            ?
+
+                            `
+                            <button
+                                class="whatsapp"
+                                onclick="openManualPublicityWhatsApp(${index})">
+
+                                WhatsApp
+
+                            </button>
+                            `
+
+                            :
+
+                            ""
+                        }
+
+                    </td>
+
+                </tr>
+            `;
 
         }
+    );
+
+}
+
+
+/* =========================================================
+   PUBLICITY PREVIEW
+========================================================= */
+
+function previewPublicityCampaign(){
+
+    if(!selectedEvent)
+        return;
+
+
+    const message =
+        document.getElementById(
+            "publicityMessage"
+        ).value;
+
+
+    const poster =
+        document.getElementById(
+            "attachmentName"
+        ).textContent;
+
+
+    alert(
+
+`PUBLICITY PREVIEW
+
+Event:
+${selectedEvent.eventName}
+
+Date:
+${selectedEvent.eventDate}
+
+Message:
+${message}
+
+Poster:
+${poster || "No poster selected"}`
+    );
+
+}
+
+
+function previewPublicityPerson(index){
+
+    const person =
+        publicityAudience[index];
+
+
+    if(!person)
+        return;
+
+
+    const baseMessage =
+        document.getElementById(
+            "publicityMessage"
+        ).value;
+
+
+    const message =
+        personaliseMessage(
+            baseMessage,
+            person
+        );
+
+
+    alert(
+`To: ${getPersonName(person)}
+
+${message}
+
+Poster:
+${
+    publicityConfig.attachmentName ||
+    "No poster selected"
+}`
+    );
+
+}
+
+
+/* =========================================================
+   SAVE PUBLICITY
+========================================================= */
+
+async function savePublicityConfiguration(){
+
+    if(!selectedEvent)
+        return;
+
+
+    const message =
+        document.getElementById(
+            "publicityMessage"
+        ).value;
+
+
+    if(!message.trim()){
+
+        alert(
+            "Please enter a publicity message first."
+        );
+
+        return;
+
+    }
+
+
+    publicityConfig.message =
+        message;
+
+
+    const file =
+        document.getElementById(
+            "publicityAttachment"
+        ).files[0];
+
+
+    if(file){
+
+        publicityConfig.attachmentName =
+            file.name;
+
+        publicityConfig.attachmentMimeType =
+            file.type;
+
+    }
+
+
+    /*
+        GS only receives attachmentName.
+
+        The actual file is NOT uploaded by
+        the current GS router.
+    */
+
+    try{
+
+        const response =
+            await API.post(
+                "savePublicityConfiguration",
+                {
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId,
+
+                    eventName:
+                        selectedEvent.eventName,
+
+                    eventDate:
+                        selectedEvent.eventDate,
+
+                    message:
+                        publicityConfig.message,
+
+                    attachmentName:
+                        publicityConfig.attachmentName ||
+                        ""
+                }
+            );
+
+
+        if(!response.success){
+
+            throw new Error(
+                response.message ||
+                "Unable to save publicity"
+            );
+
+        }
+
 
         alert(
             "Publicity configuration saved."
         );
 
     }
+    catch(err){
+
+        console.error(err);
 
 
-    async function openManualPublicityWhatsApp(index) {
+        alert(
+            "Unable to save publicity configuration.\n\n" +
+            err.message
+        );
 
-        const person =
-            publicityAudience[index];
+    }
 
-        if (!person) return;
-
-        const status =
-            String(
-                person.publicityStatus ||
-                person.PublicityStatus ||
-                "PENDING"
-            ).toUpperCase();
-
-        if (status === "SENT") return;
-
-        const mobile =
-            getPersonMobile(person);
-
-        if (!mobile) {
-
-            alert(
-                "This participant does not have a mobile number."
-            );
-
-            return;
-
-        }
-
-        const message =
-            personaliseMessage(
-                getValue("ccPublicityMessage"),
-                person
-            );
-
-        if (!message.trim()) {
-
-            alert(
-                "Please enter a publicity message first."
-            );
-
-            return;
-
-        }
+}
 
 
-        const result =
+/* =========================================================
+   REFRESH PUBLICITY
+========================================================= */
+
+async function refreshPublicityAudience(){
+
+    await loadPublicityAudience();
+
+}
+
+
+/* =========================================================
+   PREPARE PUBLICITY WHATSAPP
+========================================================= */
+
+async function preparePublicityWhatsApp(
+    person,
+    message
+){
+
+    try{
+
+        const response =
             await API.post(
                 "preparePublicityWhatsApp",
                 {
+
                     personId:
                         getPersonId(person),
 
                     eventId:
-                        getSpreadsheetId(selectedEvent),
+                        selectedEvent.spreadsheetId,
 
                     eventName:
-                        getEventName(selectedEvent),
+                        selectedEvent.eventName,
 
-                    mobile,
+                    mobile:
+                        getPersonMobile(person),
 
                     name:
                         getPersonName(person),
 
-                    message
+                    message:
+                        message
+
                 }
             );
 
 
-        if (!result.success) {
+        if(!response.success){
 
-            alert(
-                result.message ||
-                "Unable to prepare WhatsApp message."
+            throw new Error(
+                response.message ||
+                "Unable to prepare WhatsApp message"
             );
-
-            return;
 
         }
 
 
-        window.open(
-            "https://wa.me/" +
-            cleanPhone(mobile) +
-            "?text=" +
-            encodeURIComponent(message),
-            "_blank"
+        return response;
+
+    }
+    catch(err){
+
+        console.warn(
+            "preparePublicityWhatsApp:",
+            err
+        );
+
+        /*
+            The browser can still open WhatsApp
+            directly if preparation is unavailable.
+        */
+
+        return null;
+
+    }
+
+}
+
+
+
+/* =========================================================
+   MANUAL WHATSAPP PUBLICITY
+========================================================= */
+
+/* =========================================================
+   MANUAL WHATSAPP PUBLICITY
+========================================================= */
+
+async function openManualPublicityWhatsApp(index){
+
+    const person =
+        publicityAudience[index];
+
+    if(!person)
+        return;
+
+
+    const status =
+        String(
+            person.publicityStatus ||
+            person.PublicityStatus ||
+            ""
+        )
+        .toUpperCase();
+
+
+    if(status === "SENT"){
+
+        alert(
+            getPersonName(person) +
+            " has already received publicity for this event."
+        );
+
+        return;
+    }
+
+
+    const phone =
+        normalisePhone(
+            getPersonMobile(person)
         );
 
 
-        await markCommunicationSent(
-            person,
-            "PUBLICITY",
-            "",
+    if(!phone){
+
+        alert(
+            getPersonName(person) +
+            " does not have a valid mobile number."
+        );
+
+        return;
+    }
+
+
+    const baseMessage =
+        document.getElementById(
+            "publicityMessage"
+        ).value;
+
+
+    if(!baseMessage.trim()){
+
+        alert(
+            "Please prepare the publicity message first."
+        );
+
+        return;
+    }
+
+
+    const message =
+        personaliseMessage(
+            baseMessage,
+            person
+        );
+
+
+    /*
+        Record that WhatsApp publicity was prepared.
+    */
+
+    await preparePublicityWhatsApp(
+        person,
+        message
+    );
+
+
+    /*
+        Open WhatsApp.
+    */
+
+    const url =
+        "https://wa.me/" +
+        phone +
+        "?text=" +
+        encodeURIComponent(
             message
         );
 
+
+    window.open(
+        url,
+        "_blank"
+    );
+
+
+    /*
+        Immediately mark Publicity as SENT
+        after the WhatsApp button is pressed.
+    */
+
+    await markCommunicationSent(
+        person,
+        "PUBLICITY",
+        "",
+        message
+    );
+
+}
+
+
+
+
+
+/* =========================================================
+   SELECTED PUBLICITY
+========================================================= */
+
+async function sendSelectedPublicity(){
+
+    const selected =
+        document.querySelectorAll(
+            ".publicityCheck:checked"
+        );
+
+
+    if(selected.length === 0){
+
+        alert(
+            "Please select people first."
+        );
+
+        return;
+
     }
 
 
-    async function sendSelectedPublicity() {
+    const confirmed =
+        confirm(
+            `Open WhatsApp for ${selected.length} selected people?`
+        );
 
-        const selected =
-            [
-                ...document.querySelectorAll(
-                    ".cc-publicity-check:checked"
-                )
-            ];
 
-        if (!selected.length) {
+    if(!confirmed)
+        return;
 
-            alert(
-                "Please select at least one participant."
+
+    for(
+        const checkbox of selected
+    ){
+
+        const index =
+            Number(
+                checkbox.value
             );
 
-            return;
 
-        }
-
-        for (const checkbox of selected) {
-
-            const index =
-                Number(
-                    checkbox.dataset.index
-                );
-
-            await openManualPublicityWhatsApp(index);
-
-        }
-
-        await loadPublicityAudience();
+        await openManualPublicityWhatsApp(
+            index
+        );
 
     }
 
 
-    /* =====================================================
-       REMINDER
-       ===================================================== */
+    await loadPublicityAudience();
 
-    async function loadReminder() {
+}
 
-        if (!selectedEvent) return;
 
-        const days =
-            getDaysRemaining();
+/* =========================================================
+   REMINDER
+========================================================= */
 
-        const defaultStage =
-            determineDefaultReminderStage(days);
+async function loadReminder(){
 
-        setValue(
-            "ccReminderType",
-            reminderConfig.reminderType ||
-            defaultStage
+    if(!selectedEvent)
+        return;
+
+
+    const availability =
+        getReminderAvailability();
+
+
+    if(!availability.available){
+
+        alert(
+            availability.reason
         );
 
-        setText(
-            "ccReminderEventName",
-            getEventName(selectedEvent)
-        );
-
-        setText(
-            "ccReminderEventDate",
-            getEventDate(selectedEvent)
-        );
-
-        await loadReminderConfiguration();
-
-        await loadParticipants();
+        return;
 
     }
 
 
-    async function loadReminderConfiguration() {
+    reminderConfig = {
 
-        const spreadsheetId =
-            getSpreadsheetId(selectedEvent);
+        spreadsheetId:
+            selectedEvent.spreadsheetId,
 
-        const reminderType =
-            getValue("ccReminderType");
+        eventName:
+            selectedEvent.eventName,
+
+        eventDate:
+            selectedEvent.eventDate,
+
+        reminderType:
+            determineDefaultReminderStage()
+
+    };
 
 
-        const result =
+    document.getElementById(
+        "reminderType"
+    ).value =
+        reminderConfig.reminderType;
+
+
+    document.getElementById(
+        "reminderEventName"
+    ).textContent =
+        selectedEvent.eventName;
+
+
+    document.getElementById(
+        "reminderEventDate"
+    ).textContent =
+        "📅 " +
+        selectedEvent.eventDate;
+
+
+    updateReminderStageNotice();
+
+
+    await loadReminderConfiguration();
+
+    await loadParticipants();
+
+}
+
+
+/* =========================================================
+   DEFAULT REMINDER STAGE
+========================================================= */
+
+function determineDefaultReminderStage(){
+
+    const days =
+        getDaysRemaining();
+
+
+    if(days <= 1)
+        return "T-1";
+
+
+    if(days <= 3)
+        return "T-3";
+
+
+    return "T-7";
+
+}
+
+
+/* =========================================================
+   LOAD REMINDER CONFIGURATION
+========================================================= */
+
+async function loadReminderConfiguration(){
+
+    if(!selectedEvent)
+        return;
+
+
+    try{
+
+        /*
+            IMPORTANT:
+
+            GS expects:
+
+            JSON.parse(e.parameter.data)
+        */
+
+        const response =
             await API.post(
                 "getReminderConfiguration",
                 {
-                    data: JSON.stringify({
-                        spreadsheetId,
-                        reminderType
-                    })
+                    data:
+                        JSON.stringify({
+
+                            spreadsheetId:
+                                selectedEvent.spreadsheetId,
+
+                            reminderType:
+                                reminderConfig.reminderType
+
+                        })
                 }
             );
 
 
-        if (!result.success) return;
+        if(!response.success){
 
-
-        reminderConfig =
-            result.data || {};
-
-
-        setValue(
-            "ccReportingTime",
-            reminderConfig.reportingTime || ""
-        );
-
-        setValue(
-            "ccEventTime",
-            reminderConfig.eventTime || ""
-        );
-
-        setValue(
-            "ccVenue",
-            reminderConfig.venue || ""
-        );
-
-        setValue(
-            "ccLocation",
-            reminderConfig.location || ""
-        );
-
-        setValue(
-            "ccImportantInfo",
-            reminderConfig.importantInfo || ""
-        );
-
-        setValue(
-            "ccCustomMessage",
-            reminderConfig.customMessage || ""
-        );
-
-        updateReminderStageNotice();
-
-    }
-
-
-    async function changeReminderType() {
-
-        if (!selectedEvent) return;
-
-        await loadReminderConfiguration();
-
-        await loadParticipants();
-
-    }
-
-
-    function updateReminderStageNotice() {
-
-        const notice =
-            document.getElementById(
-                "ccReminderStageNotice"
+            throw new Error(
+                response.message ||
+                "Unable to load reminder configuration"
             );
 
-        if (!notice) return;
+        }
 
-        notice.textContent =
-            `Current reminder stage: ${getValue("ccReminderType")}`;
+
+        const saved =
+            response.data;
+
+
+        if(saved){
+
+            document.getElementById(
+                "reportingTime"
+            ).value =
+                saved.reportingTime || "";
+
+
+            document.getElementById(
+                "eventTime"
+            ).value =
+                saved.eventTime || "";
+
+
+            document.getElementById(
+                "venue"
+            ).value =
+                saved.venue || "";
+
+
+            document.getElementById(
+                "location"
+            ).value =
+                saved.location || "";
+
+
+            document.getElementById(
+                "importantInfo"
+            ).value =
+                saved.importantInfo || "";
+
+
+            document.getElementById(
+                "customMessage"
+            ).value =
+                saved.customMessage || "";
+
+        }
+
+    }
+    catch(err){
+
+        console.warn(
+            "Unable to load reminder configuration:",
+            err
+        );
 
     }
 
 
-    async function saveReminderConfig() {
+    updateReminderStageNotice();
 
-        if (!selectedEvent) return;
+}
 
-        const result =
+
+/* =========================================================
+   CHANGE REMINDER TYPE
+========================================================= */
+
+async function changeReminderType(){
+
+    if(!selectedEvent)
+        return;
+
+
+    reminderConfig.reminderType =
+        document.getElementById(
+            "reminderType"
+        ).value;
+
+
+    await loadReminderConfiguration();
+
+    await loadParticipants();
+
+}
+
+
+/* =========================================================
+   REMINDER STAGE NOTICE
+========================================================= */
+
+function updateReminderStageNotice(){
+
+    const stage =
+        reminderConfig.reminderType;
+
+
+    const days =
+        getDaysRemaining();
+
+
+    let text = "";
+
+
+    if(stage === "T-7"){
+
+        text =
+            "T-7 reminder. This reminder is intended for approximately one week before the event.";
+
+    }
+
+
+    if(stage === "T-3"){
+
+        text =
+            "T-3 reminder. This reminder is intended for approximately three days before the event.";
+
+    }
+
+
+    if(stage === "T-1"){
+
+        text =
+            "T-1 reminder. This reminder is intended for the day before the event.";
+
+    }
+
+
+    if(days !== null){
+
+        text +=
+            ` Current event timing: ${days} day(s) remaining.`;
+
+    }
+
+
+    document.getElementById(
+        "reminderStageNotice"
+    ).textContent =
+        text;
+
+}
+
+
+/* =========================================================
+   SAVE REMINDER CONFIGURATION
+========================================================= */
+
+async function saveReminderConfig(){
+
+    if(!selectedEvent)
+        return;
+
+
+    reminderConfig.reportingTime =
+        document.getElementById(
+            "reportingTime"
+        ).value;
+
+
+    reminderConfig.eventTime =
+        document.getElementById(
+            "eventTime"
+        ).value;
+
+
+    reminderConfig.venue =
+        document.getElementById(
+            "venue"
+        ).value;
+
+
+    reminderConfig.location =
+        document.getElementById(
+            "location"
+        ).value;
+
+
+    reminderConfig.importantInfo =
+        document.getElementById(
+            "importantInfo"
+        ).value;
+
+
+    reminderConfig.customMessage =
+        document.getElementById(
+            "customMessage"
+        ).value;
+
+
+    try{
+
+        const response =
             await API.post(
                 "saveReminderConfiguration",
-                {
-
-                    spreadsheetId:
-                        getSpreadsheetId(selectedEvent),
-
-                    eventName:
-                        getEventName(selectedEvent),
-
-                    eventDate:
-                        getEventDate(selectedEvent),
-
-                    reminderType:
-                        getValue("ccReminderType"),
-
-                    reportingTime:
-                        getValue("ccReportingTime"),
-
-                    eventTime:
-                        getValue("ccEventTime"),
-
-                    venue:
-                        getValue("ccVenue"),
-
-                    location:
-                        getValue("ccLocation"),
-
-                    importantInfo:
-                        getValue("ccImportantInfo"),
-
-                    customMessage:
-                        getValue("ccCustomMessage")
-
-                }
+                reminderConfig
             );
 
 
-        if (!result.success) {
+        if(!response.success){
 
-            alert(
-                result.message ||
-                "Unable to save reminder configuration."
+            throw new Error(
+                response.message ||
+                "Unable to save reminder configuration"
             );
-
-            return;
 
         }
 
@@ -6937,249 +8022,502 @@ window.CommunicationsCentre = (() => {
             "Reminder configuration saved."
         );
 
+
+        await loadParticipants();
+
+    }
+    catch(err){
+
+        console.error(err);
+
+
+        alert(
+            "Unable to save reminder configuration.\n\n" +
+            err.message
+        );
+
     }
 
-
-    async function loadParticipants() {
-
-        if (!selectedEvent) return;
-
-        const reminderType =
-            getValue("ccReminderType");
+}
 
 
-        const result =
+/* =========================================================
+   LOAD PARTICIPANTS
+========================================================= */
+
+async function loadParticipants(){
+
+    if(!selectedEvent)
+        return;
+
+
+    try{
+
+        const response =
             await API.post(
                 "getReminderParticipants",
                 {
-                    spreadsheetId:
-                        getSpreadsheetId(selectedEvent),
 
-                    reminderType
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId,
+
+                    reminderType:
+                        reminderConfig.reminderType
+
                 }
             );
 
 
-        if (!result.success) {
+        if(!response.success){
 
-            alert(
-                result.message ||
-                "Unable to load participants."
+            throw new Error(
+                response.message ||
+                "Unable to load participants"
             );
-
-            return;
 
         }
 
 
         participants =
-            dedupePeople(
-                result.data || []
+            response.data || [];
+
+
+        participants =
+            deduplicatePeople(
+                participants
             );
+
 
         renderParticipants();
 
     }
+    catch(err){
+
+        console.error(err);
 
 
-    function renderParticipants() {
+        document.getElementById(
+            "participantTable"
+        ).innerHTML =
+        `
+            <tr>
 
-        const tbody =
-            document.getElementById(
-                "ccParticipantTable"
-            );
+                <td colspan="6">
 
-        if (!tbody) return;
+                    <div class="empty">
+
+                        Unable to load participants.
+
+                        <br><br>
+
+                        ${escapeHtml(
+                            err.message || ""
+                        )}
+
+                    </div>
+
+                </td>
+
+            </tr>
+        `;
+
+    }
+
+}
 
 
-        let sent = 0;
-        let pending = 0;
-        let failed = 0;
+/* =========================================================
+   RENDER PARTICIPANTS
+========================================================= */
+
+function renderParticipants(){
+
+    const table =
+        document.getElementById(
+            "participantTable"
+        );
 
 
-        participants.forEach(person => {
+    table.innerHTML = "";
+
+
+    participants.sort(
+        sortByName
+    );
+
+
+    let sent = 0;
+
+    let pending = 0;
+
+    let failed = 0;
+
+
+    participants.forEach(
+        p => {
 
             const status =
                 String(
-                    person.reminderStatus ||
-                    person.ReminderStatus ||
-                    person.status ||
+                    p.reminderStatus ||
+                    p.ReminderStatus ||
                     "PENDING"
-                ).toUpperCase();
+                )
+                .toUpperCase();
 
 
-            if (status === "SENT") sent++;
-            else if (status === "FAILED") failed++;
-            else pending++;
+            if(status === "SENT")
+                sent++;
 
-        });
+            else if(status === "FAILED")
+                failed++;
 
-
-        setText(
-            "ccReminderTotal",
-            participants.length
-        );
-
-        setText(
-            "ccReminderSent",
-            sent
-        );
-
-        setText(
-            "ccReminderPending",
-            pending
-        );
-
-        setText(
-            "ccReminderFailed",
-            failed
-        );
-
-
-        if (!participants.length) {
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align:center;">
-                        No participants found.
-                    </td>
-                </tr>
-            `;
-
-            return;
+            else
+                pending++;
 
         }
+    );
 
 
-        participants.sort(sortByName);
+    document.getElementById(
+        "reminderTotal"
+    ).textContent =
+        participants.length;
 
 
-        tbody.innerHTML =
-            participants.map(
-                (person, index) => {
-
-                    const status =
-                        String(
-                            person.reminderStatus ||
-                            person.ReminderStatus ||
-                            "PENDING"
-                        ).toUpperCase();
+    document.getElementById(
+        "reminderSent"
+    ).textContent =
+        sent;
 
 
-                    return `
-
-                        <tr>
-
-                            <td>
-
-                                <input
-                                    type="checkbox"
-                                    class="cc-person-check"
-                                    data-index="${index}"
-                                    ${status === "SENT"
-                                        ? "disabled"
-                                        : ""}>
-
-                            </td>
+    document.getElementById(
+        "reminderPending"
+    ).textContent =
+        pending;
 
 
-                            <td>
-                                ${escapeHtml(
-                                    getPersonName(person)
-                                )}
-                            </td>
+    document.getElementById(
+        "reminderFailed"
+    ).textContent =
+        failed;
 
 
-                            <td>
-                                ${escapeHtml(
-                                    getPersonMobile(person)
-                                )}
-                            </td>
+    if(
+        participants.length === 0
+    ){
 
+        table.innerHTML =
+        `
+            <tr>
 
-                            <td>
-                                ${status}
-                            </td>
+                <td colspan="6">
 
+                    <div class="empty">
 
-                            <td>
+                        No registered participants
+                        requiring this reminder.
 
-                                <div class="cc-button-row">
+                    </div>
 
-                                    <button
-                                        type="button"
-                                        class="cc-preview"
-                                        onclick="CommunicationsCentre.previewReminder(${index})">
+                </td>
 
-                                        Preview
+            </tr>
+        `;
 
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="cc-whatsapp"
-                                        onclick="CommunicationsCentre.openManualReminderWhatsApp(${index})"
-                                        ${status === "SENT"
-                                            ? "disabled"
-                                            : ""}>
-
-                                        WhatsApp
-
-                                    </button>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-
-                    `;
-
-                }
-            ).join("");
+        return;
 
     }
 
 
-    async function openManualReminderWhatsApp(index) {
+    participants.forEach(
+        (p,index) => {
 
-        const person =
-            participants[index];
-
-        if (!person) return;
-
-
-        const status =
-            String(
-                person.reminderStatus ||
-                person.ReminderStatus ||
-                "PENDING"
-            ).toUpperCase();
+            const status =
+                String(
+                    p.reminderStatus ||
+                    p.ReminderStatus ||
+                    "PENDING"
+                )
+                .toUpperCase();
 
 
-        if (status === "SENT") return;
+            let statusClass =
+                "badge-yellow";
 
 
-        const mobile =
-            getPersonMobile(person);
+            if(status === "SENT")
+                statusClass =
+                    "badge-green";
 
-        if (!mobile) {
 
-            alert(
-                "This participant does not have a mobile number."
-            );
+            if(status === "FAILED")
+                statusClass =
+                    "badge-red";
 
-            return;
+
+            table.innerHTML +=
+            `
+                <tr>
+
+                    <td>
+
+                        <input
+                            type="checkbox"
+                            class="personCheck"
+                            value="${index}"
+                            ${
+                                status === "SENT"
+                                ? "disabled"
+                                : ""
+                            }
+                        >
+
+                    </td>
+
+
+                    <td>
+
+                        ${escapeHtml(
+                            getPersonName(p)
+                        )}
+
+                    </td>
+
+
+                    <td>
+
+                        ${escapeHtml(
+                            getPersonMobile(p)
+                        )}
+
+                    </td>
+
+
+                    <td>
+
+                        <span class="badge badge-blue">
+
+                            ${escapeHtml(
+                                reminderConfig.reminderType
+                            )}
+
+                        </span>
+
+                    </td>
+
+
+                    <td>
+
+                        <span class="badge ${statusClass}">
+
+                            ${escapeHtml(status)}
+
+                        </span>
+
+                    </td>
+
+
+                    <td>
+
+                        <button
+                            class="preview"
+                            onclick="previewReminder(${index})">
+
+                            Preview
+
+                        </button>
+
+
+                        ${
+                            status !== "SENT"
+
+                            ?
+
+                            `
+                            <button
+                                class="whatsapp"
+                                onclick="openManualReminderWhatsApp(${index})">
+
+                                WhatsApp
+
+                            </button>
+                            `
+
+                            :
+
+                            ""
+                        }
+
+                    </td>
+
+                </tr>
+            `;
 
         }
+    );
+
+}
 
 
-        const message =
-            generateReminderMessage(person);
+/* =========================================================
+   GENERATE REMINDER MESSAGE
+========================================================= */
+
+function generateReminderMessage(person){
+
+    const name =
+        getPersonName(person);
 
 
-        const result =
+    let intro = "";
+
+
+    switch(
+        reminderConfig.reminderType
+    ){
+
+        case "T-7":
+
+            intro =
+`Hi ${name}! 👋
+
+Thank you for registering for *${reminderConfig.eventName}*.
+We are delighted that you'll be joining us!`;
+
+            break;
+
+
+        case "T-3":
+
+            intro =
+`Hi ${name}! 😊
+
+Only *3 days to go* until *${reminderConfig.eventName}*!
+Our team is preparing and we're excited to welcome you.`;
+
+            break;
+
+
+        case "T-1":
+
+            intro =
+`Hi ${name}! 👋
+
+Just a friendly reminder that *${reminderConfig.eventName}* is happening *tomorrow*!
+We're looking forward to seeing you.`;
+
+            break;
+
+    }
+
+
+    let message =
+`${intro}
+
+📅 *Date*: ${reminderConfig.eventDate}
+🕒 *Reporting Time*: ${reminderConfig.reportingTime || ""}
+⏰ *Programme Starts*: ${reminderConfig.eventTime || ""}
+📍 *Venue*: ${reminderConfig.venue || ""}
+📌 *Location*: ${reminderConfig.location || ""}
+
+`;
+
+
+    if(
+        reminderConfig.importantInfo
+    ){
+
+        message +=
+`ℹ️ *Important Information*
+${reminderConfig.importantInfo}
+
+`;
+
+    }
+
+
+    if(
+        reminderConfig.customMessage
+    ){
+
+        message +=
+`💬 *A Message From Us*
+${reminderConfig.customMessage}
+
+`;
+
+    }
+
+
+    message +=
+`If you have any questions or need assistance, feel free to let us know.
+
+We pray that this gathering will be a meaningful and encouraging time for you, and we look forward to welcoming you soon.
+
+Blessings,
+*COOS Missions Team*`;
+
+
+    return message;
+
+}
+
+
+/* =========================================================
+   PREVIEW REMINDER
+========================================================= */
+
+function previewReminder(index){
+
+    const person =
+        participants[index];
+
+
+    if(!person)
+        return;
+
+
+    alert(
+        generateReminderMessage(
+            person
+        )
+    );
+
+}
+
+
+function previewReminderForFirstPerson(){
+
+    if(
+        participants.length === 0
+    ){
+
+        alert(
+            "No participants available for preview."
+        );
+
+        return;
+
+    }
+
+
+    previewReminder(0);
+
+}
+
+
+/* =========================================================
+   PREPARE REMINDER WHATSAPP
+========================================================= */
+
+async function prepareReminderWhatsApp(
+    person,
+    message
+){
+
+    try{
+
+        const response =
             await API.post(
                 "prepareReminderWhatsApp",
                 {
@@ -7188,177 +8526,312 @@ window.CommunicationsCentre = (() => {
                         getPersonId(person),
 
                     eventId:
-                        getSpreadsheetId(selectedEvent),
+                        selectedEvent.spreadsheetId,
 
                     eventName:
-                        getEventName(selectedEvent),
+                        selectedEvent.eventName,
 
-                    mobile,
+                    mobile:
+                        getPersonMobile(person),
 
                     name:
                         getPersonName(person),
 
                     reminderType:
-                        getValue("ccReminderType"),
+                        reminderConfig.reminderType,
 
-                    message
+                    message:
+                        message
 
                 }
             );
 
 
-        if (!result.success) {
+        if(!response.success){
 
-            alert(
-                result.message ||
-                "Unable to prepare reminder."
+            throw new Error(
+                response.message ||
+                "Unable to prepare reminder"
             );
-
-            return;
 
         }
 
 
-        window.open(
-            "https://wa.me/" +
-            cleanPhone(mobile) +
-            "?text=" +
-            encodeURIComponent(message),
-            "_blank"
+        return response;
+
+    }
+    catch(err){
+
+        console.warn(
+            "prepareReminderWhatsApp:",
+            err
+        );
+
+        return null;
+
+    }
+
+}
+
+
+/* =========================================================
+   MANUAL WHATSAPP REMINDER
+========================================================= */
+
+async function openManualReminderWhatsApp(index){
+
+    const person =
+        participants[index];
+
+
+    if(!person)
+        return;
+
+
+    const status =
+        String(
+            person.reminderStatus ||
+            person.ReminderStatus ||
+            ""
+        )
+        .toUpperCase();
+
+
+    if(status === "SENT"){
+
+        alert(
+            `${getPersonName(person)} has already received this reminder.`
+        );
+
+        return;
+
+    }
+
+
+    const phone =
+        normalisePhone(
+            getPersonMobile(person)
         );
 
 
-        const confirmed =
-            confirm(
-                "Did you send this WhatsApp message?"
-            );
+    if(!phone){
 
+        alert(
+            `${getPersonName(person)} does not have a valid mobile number.`
+        );
 
-        if (confirmed) {
-
-            await markCommunicationSent(
-                person,
-                "REMINDER",
-                getValue("ccReminderType"),
-                message
-            );
-
-        }
+        return;
 
     }
 
 
-    async function sendSelectedReminder() {
-
-        const selected =
-            [
-                ...document.querySelectorAll(
-                    ".cc-person-check:checked"
-                )
-            ];
+    const message =
+        generateReminderMessage(
+            person
+        );
 
 
-        if (!selected.length) {
-
-            alert(
-                "Please select at least one participant."
-            );
-
-            return;
-
-        }
-
-
-        for (const checkbox of selected) {
-
-            await openManualReminderWhatsApp(
-                Number(
-                    checkbox.dataset.index
-                )
-            );
-
-        }
-
-
-        await loadParticipants();
-
-    }
-
-
-    /* =====================================================
-       COMMUNICATION STATUS
-       ===================================================== */
-
-    async function markCommunicationSent(
+    await prepareReminderWhatsApp(
         person,
-        type,
-        stage,
         message
-    ) {
+    );
 
-        const result =
+
+    const url =
+        "https://wa.me/" +
+        phone +
+        "?text=" +
+        encodeURIComponent(
+            message
+        );
+
+
+    window.open(
+        url,
+        "_blank"
+    );
+
+
+    const sent =
+        confirm(
+`
+WhatsApp has been opened for ${getPersonName(person)}.
+
+Please check the message and press Send.
+
+Did you send the reminder?
+`
+    );
+
+
+    if(!sent)
+        return;
+
+
+    await markCommunicationSent(
+        person,
+        "REMINDER",
+        reminderConfig.reminderType,
+        message
+    );
+
+}
+
+
+/* =========================================================
+   SELECTED REMINDER
+========================================================= */
+
+async function sendSelectedReminder(){
+
+    const selected =
+        document.querySelectorAll(
+            ".personCheck:checked"
+        );
+
+
+    if(selected.length === 0){
+
+        alert(
+            "Please select people first."
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        confirm(
+            `Open WhatsApp for ${selected.length} selected people?`
+        );
+
+
+    if(!confirmed)
+        return;
+
+
+    for(
+        const checkbox of selected
+    ){
+
+        const index =
+            Number(
+                checkbox.value
+            );
+
+
+        await openManualReminderWhatsApp(
+            index
+        );
+
+    }
+
+
+    await loadParticipants();
+
+}
+
+
+/* =========================================================
+   MARK COMMUNICATION SENT
+========================================================= */
+
+/*
+    THIS REPLACES THE OLD:
+
+        recordCommunicationStatus()
+
+    The GS router exposes:
+
+        markCommunicationSent
+*/
+
+async function markCommunicationSent(
+    person,
+    type,
+    stage,
+    message
+){
+
+    try{
+
+        const payload = {
+
+            personId:
+                getPersonId(person),
+
+            eventId:
+                selectedEvent.spreadsheetId,
+
+            eventName:
+                selectedEvent.eventName,
+
+            name:
+                getPersonName(person),
+
+            mobile:
+                getPersonMobile(person),
+
+            type:
+                type,
+
+            stage:
+                stage || "",
+
+            message:
+                message || ""
+
+        };
+
+
+        const response =
             await API.post(
                 "markCommunicationSent",
-                {
-
-                    personId:
-                        getPersonId(person),
-
-                    eventId:
-                        getSpreadsheetId(selectedEvent),
-
-                    eventName:
-                        getEventName(selectedEvent),
-
-                    name:
-                        getPersonName(person),
-
-                    mobile:
-                        getPersonMobile(person),
-
-                    type,
-
-                    stage,
-
-                    message
-
-                }
+                payload
             );
 
 
-        if (!result.success) {
+        if(!response.success){
 
-            alert(
-                result.message ||
-                "Unable to mark communication as sent."
+            throw new Error(
+                response.message ||
+                "Unable to mark communication as sent"
             );
 
-            return false;
-
         }
 
 
-        if (type === "PUBLICITY") {
+        /*
+            Update local state immediately.
+        */
 
-            person.publicityStatus = "SENT";
-            person.PublicityStatus = "SENT";
+        if(type === "PUBLICITY"){
 
-        }
+            person.publicityStatus =
+                "SENT";
 
+            person.PublicityStatus =
+                "SENT";
 
-        if (type === "REMINDER") {
-
-            person.reminderStatus = "SENT";
-            person.ReminderStatus = "SENT";
-
-        }
-
-
-        if (type === "PUBLICITY") {
+            person.sentAt =
+                new Date().toISOString();
 
             renderPublicityAudience();
 
-        } else {
+        }
+
+
+        if(type === "REMINDER"){
+
+            person.reminderStatus =
+                "SENT";
+
+            person.ReminderStatus =
+                "SENT";
+
+            person.sentAt =
+                new Date().toISOString();
 
             renderParticipants();
 
@@ -7368,523 +8841,361 @@ window.CommunicationsCentre = (() => {
         return true;
 
     }
+    catch(err){
 
+        console.error(
+            "markCommunicationSent:",
+            err
+        );
 
-    /* =====================================================
-       PREVIEWS
-       ===================================================== */
-
-    function previewPublicityCampaign() {
-
-        const message =
-            getValue("ccPublicityMessage");
-
-        if (!message.trim()) {
-
-            alert(
-                "Please enter a publicity message."
-            );
-
-            return;
-
-        }
 
         alert(
-            personaliseMessage(
-                message,
-                publicityAudience[0] || {}
-            )
+            "The message was sent/opened, but the " +
+            "communication record could not be saved.\n\n" +
+            err.message
         );
 
-    }
 
-
-    function previewPublicityPerson(index) {
-
-        const person =
-            publicityAudience[index];
-
-        if (!person) return;
-
-        const message =
-            personaliseMessage(
-                getValue("ccPublicityMessage"),
-                person
-            );
-
-        alert(message);
+        return false;
 
     }
 
-
-    function previewReminder(index) {
-
-        const person =
-            participants[index];
-
-        if (!person) return;
-
-        alert(
-            generateReminderMessage(person)
-        );
-
-    }
+}
 
 
-    function previewReminderForFirstPerson() {
+/* =========================================================
+   SELECT ALL PUBLICITY
+========================================================= */
 
-        if (!participants.length) {
+function toggleAllPublicity(
+    checkbox
+){
 
-            alert(
-                "No participants available."
-            );
-
-            return;
-
-        }
-
-        previewReminder(0);
-
-    }
-
-
-    /* =====================================================
-       SELECT ALL
-       ===================================================== */
-
-    function toggleAllPublicity(master) {
-
-        document
-            .querySelectorAll(
-                ".cc-publicity-check:not(:disabled)"
-            )
-            .forEach(cb => {
-
+    document
+        .querySelectorAll(
+            ".publicityCheck:not(:disabled)"
+        )
+        .forEach(
+            cb =>
                 cb.checked =
-                    master.checked;
+                    checkbox.checked
+        );
 
-            });
-
-    }
+}
 
 
-    function toggleAllReminder(master) {
+/* =========================================================
+   SELECT ALL REMINDERS
+========================================================= */
 
-        document
-            .querySelectorAll(
-                ".cc-person-check:not(:disabled)"
-            )
-            .forEach(cb => {
+function toggleAllReminder(
+    checkbox
+){
 
+    document
+        .querySelectorAll(
+            ".personCheck:not(:disabled)"
+        )
+        .forEach(
+            cb =>
                 cb.checked =
-                    master.checked;
-
-            });
-
-    }
-
-
-    /* =====================================================
-       FILE PREVIEW
-       ===================================================== */
-
-    function handleAttachmentChange(event) {
-
-        const file =
-            event.target.files?.[0];
-
-        const name =
-            document.getElementById(
-                "ccAttachmentName"
-            );
-
-        const poster =
-            document.getElementById(
-                "ccPosterPreview"
-            );
-
-        const pdf =
-            document.getElementById(
-                "ccPdfPreview"
-            );
-
-
-        poster?.classList.add("hidden");
-        pdf?.classList.add("hidden");
-
-
-        if (!file) {
-
-            if (name) name.textContent = "";
-
-            return;
-
-        }
-
-
-        if (name) {
-            name.textContent =
-                file.name;
-        }
-
-
-        if (file.type.startsWith("image/")) {
-
-            const reader =
-                new FileReader();
-
-            reader.onload =
-                function(e) {
-
-                    if (!poster) return;
-
-                    poster.innerHTML =
-                        `<img src="${e.target.result}">`;
-
-                    poster.classList.remove(
-                        "hidden"
-                    );
-
-                };
-
-            reader.readAsDataURL(file);
-
-        }
-
-    }
-
-
-    /* =====================================================
-       HELPERS
-       ===================================================== */
-
-    function hideModules() {
-
-        document
-            .getElementById("ccPublicityModule")
-            ?.classList.add("hidden");
-
-        document
-            .getElementById("ccReminderModule")
-            ?.classList.add("hidden");
-
-    }
-
-
-    function getSpreadsheetId(event) {
-
-        return event?.spreadsheetId ||
-               event?.SpreadsheetId ||
-               event?.["Source Spreadsheet ID"] ||
-               "";
-
-    }
-
-
-    function getEventName(event) {
-
-        return event?.eventName ||
-               event?.EventName ||
-               event?.name ||
-               event?.["Event Name"] ||
-               "";
-
-    }
-
-
-    function getEventDate(event) {
-
-        return event?.eventDate ||
-               event?.EventDate ||
-               event?.date ||
-               event?.["Event Date"] ||
-               "";
-
-    }
-
-
-    function getPersonName(person) {
-
-        return person?.name ||
-               person?.Name ||
-               person?.fullName ||
-               person?.["Name"] ||
-               "Unknown";
-
-    }
-
-
-    function getPersonMobile(person) {
-
-        return person?.mobile ||
-               person?.Mobile ||
-               person?.phone ||
-               person?.Phone ||
-               person?.["Contact Number"] ||
-               "";
-
-    }
-
-
-    function getPersonId(person) {
-
-        return person?.personId ||
-               person?.PersonId ||
-               person?.id ||
-               person?.Id ||
-               getPersonMobile(person);
-
-    }
-
-
-    function getValue(id) {
-
-        return (
-            document.getElementById(id)?.value ||
-            ""
+                    checkbox.checked
         );
 
-    }
+}
 
 
-    function setValue(id, value) {
+/* =========================================================
+   FILE SELECTION
+========================================================= */
 
-        const element =
-            document.getElementById(id);
+document
+    .getElementById(
+        "publicityAttachment"
+    )
+    .addEventListener(
+        "change",
+        function(){
 
-        if (element) {
-            element.value = value ?? "";
-        }
+            const file =
+                this.files[0];
 
-    }
 
-
-    function setText(id, value) {
-
-        const element =
-            document.getElementById(id);
-
-        if (element) {
-            element.textContent =
-                value ?? "";
-        }
-
-    }
-
-
-    function cleanPhone(phone) {
-
-        return String(phone || "")
-            .replace(/\D/g, "");
-
-    }
-
-
-    function personaliseMessage(
-        message,
-        person
-    ) {
-
-        return String(message || "")
-            .replace(
-                /\{name\}/gi,
-                getPersonName(person)
-            )
-            .replace(
-                /\{event\}/gi,
-                getEventName(selectedEvent)
-            )
-            .replace(
-                /\{date\}/gi,
-                getEventDate(selectedEvent)
-            );
-
-    }
-
-
-    function generateReminderMessage(person) {
-
-        const custom =
-            getValue("ccCustomMessage");
-
-        if (custom.trim()) {
-
-            return personaliseMessage(
-                custom,
-                person
-            );
-
-        }
-
-
-        const name =
-            getPersonName(person);
-
-        const event =
-            getEventName(selectedEvent);
-
-        const date =
-            getEventDate(selectedEvent);
-
-        const reminderType =
-            getValue("ccReminderType");
-
-
-        return `Hi ${name}, this is a reminder about ${event} on ${date}.`;
-
-    }
-
-
-    function parseEventDate() {
-
-        if (!selectedEvent) return null;
-
-        const value =
-            getEventDate(selectedEvent);
-
-        if (!value) return null;
-
-        const date =
-            new Date(value);
-
-        return isNaN(date.getTime())
-            ? null
-            : date;
-
-    }
-
-
-    function getDaysRemaining() {
-
-        const date =
-            parseEventDate();
-
-        if (!date) return 999;
-
-        const now =
-            new Date();
-
-        now.setHours(
-            0, 0, 0, 0
-        );
-
-        date.setHours(
-            0, 0, 0, 0
-        );
-
-        return Math.ceil(
-            (date - now) /
-            86400000
-        );
-
-    }
-
-
-    function isReminderAvailable() {
-
-        const days =
-            getDaysRemaining();
-
-        return days >= 0 &&
-               days <= 7;
-
-    }
-
-
-    function determineDefaultReminderStage(
-        days
-    ) {
-
-        if (days <= 1) return "T-1";
-
-        if (days <= 3) return "T-3";
-
-        return "T-7";
-
-    }
-
-
-    function dedupePeople(list) {
-
-        const map =
-            new Map();
-
-        list.forEach(person => {
-
-            const key =
-                cleanPhone(
-                    getPersonMobile(person)
-                ) ||
-                String(
-                    getPersonId(person)
+            const name =
+                document.getElementById(
+                    "attachmentName"
                 );
 
-            if (!map.has(key)) {
-                map.set(key, person);
+
+            const image =
+                document.getElementById(
+                    "posterPreview"
+                );
+
+
+            const pdf =
+                document.getElementById(
+                    "pdfPreview"
+                );
+
+
+            image.style.display =
+                "none";
+
+
+            pdf.style.display =
+                "none";
+
+
+            image.src =
+                "";
+
+
+            if(!file){
+
+                name.textContent =
+                    "";
+
+                return;
+
             }
 
-        });
 
-        return [...map.values()];
-
-    }
+            name.textContent =
+                `Selected: ${file.name}`;
 
 
-    function sortByName(a, b) {
+            if(
+                file.type.startsWith(
+                    "image/"
+                )
+            ){
 
-        return getPersonName(a)
-            .localeCompare(
-                getPersonName(b)
-            );
-
-    }
-
-
-    function escapeHtml(value) {
-
-        return String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-
-    }
+                const reader =
+                    new FileReader();
 
 
-    
+                reader.onload =
+                    function(e){
+
+                        image.src =
+                            e.target.result;
 
 
-    /* =====================================================
-       PUBLIC API
-       ===================================================== */
+                        image.style.display =
+                            "block";
 
-    return {
+                    };
 
-        init,
-        loadEvents,
-        selectEvent,
-        selectActivity,
 
-        previewPublicityCampaign,
-        previewPublicityPerson,
-        savePublicityConfiguration,
-        openManualPublicityWhatsApp,
-        sendSelectedPublicity,
-        refreshPublicityAudience:
-            loadPublicityAudience,
-        toggleAllPublicity,
+                reader.readAsDataURL(
+                    file
+                );
 
-        changeReminderType,
-        saveReminderConfig,
-        previewReminderForFirstPerson,
-        loadParticipants,
-        previewReminder,
-        openManualReminderWhatsApp,
-        sendSelectedReminder,
-        toggleAllReminder
+            }
 
-    };
+
+            else if(
+                file.type ===
+                "application/pdf"
+            ){
+
+                pdf.style.display =
+                    "block";
+
+            }
+
+        }
+    );
+
+
+/* =========================================================
+   PERSONALISED MESSAGE
+========================================================= */
+
+function personaliseMessage(
+    message,
+    person
+){
+
+    const name =
+        getPersonName(person);
+
+
+    return String(
+        message || ""
+    )
+    .replace(
+        /\{name\}/gi,
+        name
+    );
+
+}
+
+
+/* =========================================================
+   PERSON HELPERS
+========================================================= */
+
+function getPersonName(person){
+
+    return String(
+        person?.name ||
+        person?.Name ||
+        person?.personName ||
+        person?.PersonName ||
+        ""
+    ).trim();
+
+}
+
+
+function getPersonMobile(person){
+
+    return String(
+        person?.mobile ||
+        person?.Mobile ||
+        person?.phone ||
+        person?.Phone ||
+        ""
+    ).trim();
+
+}
+
+
+function getPersonId(person){
+
+    return String(
+        person?.personId ||
+        person?.PersonID ||
+        person?.personID ||
+        getPersonMobile(person) ||
+        person?.email ||
+        person?.Email ||
+        getPersonName(person) ||
+        ""
+    ).trim();
+
+}
+
+
+function normalisePhone(
+    phone
+){
+
+    return String(
+        phone || ""
+    )
+    .replace(
+        /\D/g,
+        ""
+    );
+
+}
+
+
+/* =========================================================
+   DEDUPLICATE PEOPLE
+========================================================= */
+
+function deduplicatePeople(
+    people
+){
+
+    const unique =
+        new Map();
+
+
+    people.forEach(
+        person => {
+
+            const key =
+                String(
+                    getPersonId(person)
+                )
+                .trim()
+                .toLowerCase();
+
+
+            if(
+                key &&
+                !unique.has(key)
+            ){
+
+                unique.set(
+                    key,
+                    person
+                );
+
+            }
+
+        }
+    );
+
+
+    return Array.from(
+        unique.values()
+    );
+
+}
+
+
+/* =========================================================
+   SORT
+========================================================= */
+
+function sortByName(
+    a,
+    b
+){
+
+    return getPersonName(a)
+        .localeCompare(
+            getPersonName(b),
+            undefined,
+            {
+                sensitivity:
+                    "base"
+            }
+        );
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(
+    value
+){
+
+    return String(
+        value ?? ""
+    )
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+    .replace(
+        /</g,
+        "&lt;"
+    )
+    .replace(
+        />/g,
+        "&gt;"
+    )
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+    .replace(
+        /'/g,
+        "&#039;"
+    );
+
+}
+
 
 })();
 
