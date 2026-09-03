@@ -5956,6 +5956,1950 @@ async function deleteEvent(id) {
 
 })();
 
+  /* =========================================================
+   COMMUNICATIONS CENTRE
+   ========================================================= */
+
+window.CommunicationsCentre = (() => {
+
+    let events = [];
+    let selectedEvent = null;
+    let currentActivity = "";
+    let participants = [];
+    let publicityAudience = [];
+    let reminderConfig = {};
+    let publicityConfig = {};
+
+    let initialised = false;
+
+
+    /* =====================================================
+       INITIALISE
+       ===================================================== */
+
+    async function init() {
+
+        if (!initialised) {
+            bindEvents();
+            initialised = true;
+        }
+
+        await loadEvents();
+    }
+
+
+    /* =====================================================
+       EVENT BINDINGS
+       ===================================================== */
+
+    function bindEvents() {
+
+        const attachment =
+            document.getElementById("ccPublicityAttachment");
+
+        if (attachment) {
+
+            attachment.addEventListener("change", handleAttachmentChange);
+
+        }
+
+    }
+
+
+    /* =====================================================
+       LOAD EVENTS
+       ===================================================== */
+
+    async function loadEvents() {
+
+        const select =
+            document.getElementById("ccEventFilter");
+
+        if (!select) return;
+
+        select.innerHTML =
+            `<option value="">Loading events...</option>`;
+
+        try {
+
+            const result =
+                await API.post("getEventList", {});
+
+            if (!result.success) {
+                throw new Error(
+                    result.message || "Unable to load events."
+                );
+            }
+
+            events = (result.data || [])
+                .filter(event =>
+                    String(event.status || event.Status || "")
+                        .toUpperCase() === "ACTIVE"
+                );
+
+            populateEventDropdown();
+
+        } catch (error) {
+
+            console.error(
+                "Communications loadEvents error:",
+                error
+            );
+
+            select.innerHTML =
+                `<option value="">Unable to load events</option>`;
+
+        }
+
+    }
+
+
+    /* =====================================================
+       POPULATE EVENT DROPDOWN
+       ===================================================== */
+
+    function populateEventDropdown() {
+
+        const select =
+            document.getElementById("ccEventFilter");
+
+        if (!select) return;
+
+        select.innerHTML =
+            `<option value="">Select an active event...</option>`;
+
+        events.forEach((event, index) => {
+
+            const spreadsheetId =
+                event.spreadsheetId ||
+                event.SpreadsheetId ||
+                event["Source Spreadsheet ID"] ||
+                "";
+
+            const eventName =
+                event.eventName ||
+                event.EventName ||
+                event.name ||
+                event["Event Name"] ||
+                "Unnamed Event";
+
+            const eventDate =
+                event.eventDate ||
+                event.EventDate ||
+                event.date ||
+                "";
+
+            const option =
+                document.createElement("option");
+
+            option.value = index;
+
+            option.textContent =
+                eventName +
+                (eventDate ? ` — ${eventDate}` : "");
+
+            option.dataset.spreadsheetId =
+                spreadsheetId;
+
+            select.appendChild(option);
+
+        });
+
+    }
+
+
+    /* =====================================================
+       SELECT EVENT
+       ===================================================== */
+
+    function selectEvent() {
+
+        const select =
+            document.getElementById("ccEventFilter");
+
+        const index =
+            select ? select.value : "";
+
+        hideModules();
+
+        if (index === "") {
+
+            selectedEvent = null;
+
+            document
+                .getElementById("ccLifecycleCard")
+                ?.classList.add("hidden");
+
+            document
+                .getElementById("ccActivityCard")
+                ?.classList.add("hidden");
+
+            document
+                .getElementById("ccSelectedEventInfo")
+                ?.classList.add("hidden");
+
+            return;
+        }
+
+        selectedEvent =
+            events[Number(index)];
+
+        if (!selectedEvent) return;
+
+        const eventName =
+            getEventName(selectedEvent);
+
+        const eventDate =
+            getEventDate(selectedEvent);
+
+        const info =
+            document.getElementById("ccSelectedEventInfo");
+
+        if (info) {
+
+            info.innerHTML = `
+                <strong>${escapeHtml(eventName)}</strong>
+                ${eventDate
+                    ? `<br>${escapeHtml(eventDate)}`
+                    : ""}
+            `;
+
+            info.classList.remove("hidden");
+
+        }
+
+        document
+            .getElementById("ccLifecycleCard")
+            ?.classList.remove("hidden");
+
+        document
+            .getElementById("ccActivityCard")
+            ?.classList.remove("hidden");
+
+        updateLifecycleStatus();
+
+    }
+
+
+    /* =====================================================
+       ACTIVITY
+       ===================================================== */
+
+    async function selectActivity(activity) {
+
+        if (!selectedEvent) return;
+
+        currentActivity = activity;
+
+        hideModules();
+
+        if (activity === "publicity") {
+
+            document
+                .getElementById("ccPublicityModule")
+                ?.classList.remove("hidden");
+
+            await loadPublicity();
+
+            return;
+        }
+
+
+        if (activity === "reminder") {
+
+            if (!isReminderAvailable()) {
+
+                alert(
+                    "Reminder is only available from T-7 to T-0."
+                );
+
+                return;
+
+            }
+
+            document
+                .getElementById("ccReminderModule")
+                ?.classList.remove("hidden");
+
+            await loadReminder();
+
+        }
+
+    }
+
+
+    /* =====================================================
+       LIFECYCLE
+       ===================================================== */
+
+    function updateLifecycleStatus() {
+
+        const container =
+            document.getElementById("ccLifecycleStatus");
+
+        if (!container || !selectedEvent) return;
+
+        const days =
+            getDaysRemaining();
+
+        const reminderAvailable =
+            days >= 0 && days <= 7;
+
+        container.innerHTML = `
+
+            <div class="cc-event-info">
+
+                <strong>Publicity</strong>
+
+                <span style="margin-left:10px;">
+                    AVAILABLE
+                </span>
+
+            </div>
+
+            <div class="cc-event-info">
+
+                <strong>Reminder</strong>
+
+                <span style="margin-left:10px;">
+                    ${
+                        reminderAvailable
+                            ? "AVAILABLE"
+                            : "NOT AVAILABLE"
+                    }
+                </span>
+
+            </div>
+
+        `;
+
+        const reminderText =
+            document.getElementById(
+                "ccReminderAvailabilityText"
+            );
+
+        if (reminderText) {
+
+            reminderText.textContent =
+                reminderAvailable
+                    ? "Available for this event"
+                    : "Available from T-7";
+
+        }
+
+    }
+
+
+    /* =====================================================
+       PUBLICITY
+       ===================================================== */
+
+    async function loadPublicity() {
+
+        if (!selectedEvent) return;
+
+        const eventName =
+            getEventName(selectedEvent);
+
+        const eventDate =
+            getEventDate(selectedEvent);
+
+        setText(
+            "ccPublicityEventName",
+            eventName
+        );
+
+        setText(
+            "ccPublicityEventDate",
+            eventDate
+        );
+
+        const spreadsheetId =
+            getSpreadsheetId(selectedEvent);
+
+        try {
+
+            const result =
+                await API.post(
+                    "getPublicityConfiguration",
+                    {
+                        data: JSON.stringify({
+                            spreadsheetId
+                        })
+                    }
+                );
+
+            if (result.success) {
+
+                publicityConfig =
+                    result.data || {};
+
+                setValue(
+                    "ccPublicityMessage",
+                    publicityConfig.message || ""
+                );
+
+                setText(
+                    "ccAttachmentName",
+                    publicityConfig.attachmentName || ""
+                );
+
+            }
+
+            await loadPublicityAudience();
+
+        } catch (error) {
+
+            console.error(
+                "loadPublicity error:",
+                error
+            );
+
+            alert(
+                "Unable to load publicity configuration."
+            );
+
+        }
+
+    }
+
+
+    async function loadPublicityAudience() {
+
+        const spreadsheetId =
+            getSpreadsheetId(selectedEvent);
+
+        const result =
+            await API.post(
+                "getPublicityAudience",
+                {
+                    spreadsheetId
+                }
+            );
+
+        if (!result.success) {
+
+            throw new Error(
+                result.message ||
+                "Unable to load publicity audience."
+            );
+
+        }
+
+        publicityAudience =
+            dedupePeople(result.data || []);
+
+        renderPublicityAudience();
+
+    }
+
+
+    function renderPublicityAudience() {
+
+        const tbody =
+            document.getElementById(
+                "ccPublicityTable"
+            );
+
+        if (!tbody) return;
+
+        let sent = 0;
+        let pending = 0;
+        let registered = 0;
+
+        publicityAudience
+            .forEach(person => {
+
+                const status =
+                    String(
+                        person.publicityStatus ||
+                        person.PublicityStatus ||
+                        person.status ||
+                        "PENDING"
+                    ).toUpperCase();
+
+                if (status === "SENT") {
+                    sent++;
+                } else {
+                    pending++;
+                }
+
+                if (
+                    person.registered === true ||
+                    String(person.registered)
+                        .toLowerCase() === "true"
+                ) {
+                    registered++;
+                }
+
+            });
+
+
+        setText(
+            "ccPublicityTotal",
+            publicityAudience.length
+        );
+
+        setText(
+            "ccPublicitySent",
+            sent
+        );
+
+        setText(
+            "ccPublicityPending",
+            pending
+        );
+
+        setText(
+            "ccPublicityRegistered",
+            registered
+        );
+
+
+        if (!publicityAudience.length) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center;">
+                        No participants found.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+
+        publicityAudience.sort(sortByName);
+
+
+        tbody.innerHTML =
+            publicityAudience.map(
+                (person, index) => {
+
+                    const name =
+                        getPersonName(person);
+
+                    const mobile =
+                        getPersonMobile(person);
+
+                    const status =
+                        String(
+                            person.publicityStatus ||
+                            person.PublicityStatus ||
+                            "PENDING"
+                        ).toUpperCase();
+
+                    const registered =
+                        person.registered === true ||
+                        String(person.registered)
+                            .toLowerCase() === "true";
+
+
+                    return `
+
+                        <tr>
+
+                            <td>
+
+                                <input
+                                    type="checkbox"
+                                    class="cc-publicity-check"
+                                    data-index="${index}"
+                                    ${status === "SENT"
+                                        ? "disabled"
+                                        : ""}>
+
+                            </td>
+
+
+                            <td>
+                                ${escapeHtml(name)}
+                            </td>
+
+
+                            <td>
+                                ${escapeHtml(mobile)}
+                            </td>
+
+
+                            <td>
+                                ${registered
+                                    ? "Registered"
+                                    : "Not Registered"}
+                            </td>
+
+
+                            <td>
+                                ${status}
+                            </td>
+
+
+                            <td>
+
+                                <div class="cc-button-row">
+
+                                    <button
+                                        type="button"
+                                        class="cc-preview"
+                                        onclick="CommunicationsCentre.previewPublicityPerson(${index})">
+
+                                        Preview
+
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        class="cc-whatsapp"
+                                        onclick="CommunicationsCentre.openManualPublicityWhatsApp(${index})"
+                                        ${status === "SENT"
+                                            ? "disabled"
+                                            : ""}>
+
+                                        WhatsApp
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            ).join("");
+
+    }
+
+
+    async function savePublicityConfiguration() {
+
+        if (!selectedEvent) return;
+
+        const data = {
+
+            spreadsheetId:
+                getSpreadsheetId(selectedEvent),
+
+            eventName:
+                getEventName(selectedEvent),
+
+            eventDate:
+                getEventDate(selectedEvent),
+
+            message:
+                getValue("ccPublicityMessage"),
+
+            attachmentName:
+                getValue(
+                    "ccAttachmentName"
+                )
+
+        };
+
+        const result =
+            await API.post(
+                "savePublicityConfiguration",
+                data
+            );
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to save publicity configuration."
+            );
+
+            return;
+
+        }
+
+        alert(
+            "Publicity configuration saved."
+        );
+
+    }
+
+
+    async function openManualPublicityWhatsApp(index) {
+
+        const person =
+            publicityAudience[index];
+
+        if (!person) return;
+
+        const status =
+            String(
+                person.publicityStatus ||
+                person.PublicityStatus ||
+                "PENDING"
+            ).toUpperCase();
+
+        if (status === "SENT") return;
+
+        const mobile =
+            getPersonMobile(person);
+
+        if (!mobile) {
+
+            alert(
+                "This participant does not have a mobile number."
+            );
+
+            return;
+
+        }
+
+        const message =
+            personaliseMessage(
+                getValue("ccPublicityMessage"),
+                person
+            );
+
+        if (!message.trim()) {
+
+            alert(
+                "Please enter a publicity message first."
+            );
+
+            return;
+
+        }
+
+
+        const result =
+            await API.post(
+                "preparePublicityWhatsApp",
+                {
+                    personId:
+                        getPersonId(person),
+
+                    eventId:
+                        getSpreadsheetId(selectedEvent),
+
+                    eventName:
+                        getEventName(selectedEvent),
+
+                    mobile,
+
+                    name:
+                        getPersonName(person),
+
+                    message
+                }
+            );
+
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to prepare WhatsApp message."
+            );
+
+            return;
+
+        }
+
+
+        window.open(
+            "https://wa.me/" +
+            cleanPhone(mobile) +
+            "?text=" +
+            encodeURIComponent(message),
+            "_blank"
+        );
+
+
+        await markCommunicationSent(
+            person,
+            "PUBLICITY",
+            "",
+            message
+        );
+
+    }
+
+
+    async function sendSelectedPublicity() {
+
+        const selected =
+            [
+                ...document.querySelectorAll(
+                    ".cc-publicity-check:checked"
+                )
+            ];
+
+        if (!selected.length) {
+
+            alert(
+                "Please select at least one participant."
+            );
+
+            return;
+
+        }
+
+        for (const checkbox of selected) {
+
+            const index =
+                Number(
+                    checkbox.dataset.index
+                );
+
+            await openManualPublicityWhatsApp(index);
+
+        }
+
+        await loadPublicityAudience();
+
+    }
+
+
+    /* =====================================================
+       REMINDER
+       ===================================================== */
+
+    async function loadReminder() {
+
+        if (!selectedEvent) return;
+
+        const days =
+            getDaysRemaining();
+
+        const defaultStage =
+            determineDefaultReminderStage(days);
+
+        setValue(
+            "ccReminderType",
+            reminderConfig.reminderType ||
+            defaultStage
+        );
+
+        setText(
+            "ccReminderEventName",
+            getEventName(selectedEvent)
+        );
+
+        setText(
+            "ccReminderEventDate",
+            getEventDate(selectedEvent)
+        );
+
+        await loadReminderConfiguration();
+
+        await loadParticipants();
+
+    }
+
+
+    async function loadReminderConfiguration() {
+
+        const spreadsheetId =
+            getSpreadsheetId(selectedEvent);
+
+        const reminderType =
+            getValue("ccReminderType");
+
+
+        const result =
+            await API.post(
+                "getReminderConfiguration",
+                {
+                    data: JSON.stringify({
+                        spreadsheetId,
+                        reminderType
+                    })
+                }
+            );
+
+
+        if (!result.success) return;
+
+
+        reminderConfig =
+            result.data || {};
+
+
+        setValue(
+            "ccReportingTime",
+            reminderConfig.reportingTime || ""
+        );
+
+        setValue(
+            "ccEventTime",
+            reminderConfig.eventTime || ""
+        );
+
+        setValue(
+            "ccVenue",
+            reminderConfig.venue || ""
+        );
+
+        setValue(
+            "ccLocation",
+            reminderConfig.location || ""
+        );
+
+        setValue(
+            "ccImportantInfo",
+            reminderConfig.importantInfo || ""
+        );
+
+        setValue(
+            "ccCustomMessage",
+            reminderConfig.customMessage || ""
+        );
+
+        updateReminderStageNotice();
+
+    }
+
+
+    async function changeReminderType() {
+
+        if (!selectedEvent) return;
+
+        await loadReminderConfiguration();
+
+        await loadParticipants();
+
+    }
+
+
+    function updateReminderStageNotice() {
+
+        const notice =
+            document.getElementById(
+                "ccReminderStageNotice"
+            );
+
+        if (!notice) return;
+
+        notice.textContent =
+            `Current reminder stage: ${getValue("ccReminderType")}`;
+
+    }
+
+
+    async function saveReminderConfig() {
+
+        if (!selectedEvent) return;
+
+        const result =
+            await API.post(
+                "saveReminderConfiguration",
+                {
+
+                    spreadsheetId:
+                        getSpreadsheetId(selectedEvent),
+
+                    eventName:
+                        getEventName(selectedEvent),
+
+                    eventDate:
+                        getEventDate(selectedEvent),
+
+                    reminderType:
+                        getValue("ccReminderType"),
+
+                    reportingTime:
+                        getValue("ccReportingTime"),
+
+                    eventTime:
+                        getValue("ccEventTime"),
+
+                    venue:
+                        getValue("ccVenue"),
+
+                    location:
+                        getValue("ccLocation"),
+
+                    importantInfo:
+                        getValue("ccImportantInfo"),
+
+                    customMessage:
+                        getValue("ccCustomMessage")
+
+                }
+            );
+
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to save reminder configuration."
+            );
+
+            return;
+
+        }
+
+
+        alert(
+            "Reminder configuration saved."
+        );
+
+    }
+
+
+    async function loadParticipants() {
+
+        if (!selectedEvent) return;
+
+        const reminderType =
+            getValue("ccReminderType");
+
+
+        const result =
+            await API.post(
+                "getReminderParticipants",
+                {
+                    spreadsheetId:
+                        getSpreadsheetId(selectedEvent),
+
+                    reminderType
+                }
+            );
+
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to load participants."
+            );
+
+            return;
+
+        }
+
+
+        participants =
+            dedupePeople(
+                result.data || []
+            );
+
+        renderParticipants();
+
+    }
+
+
+    function renderParticipants() {
+
+        const tbody =
+            document.getElementById(
+                "ccParticipantTable"
+            );
+
+        if (!tbody) return;
+
+
+        let sent = 0;
+        let pending = 0;
+        let failed = 0;
+
+
+        participants.forEach(person => {
+
+            const status =
+                String(
+                    person.reminderStatus ||
+                    person.ReminderStatus ||
+                    person.status ||
+                    "PENDING"
+                ).toUpperCase();
+
+
+            if (status === "SENT") sent++;
+            else if (status === "FAILED") failed++;
+            else pending++;
+
+        });
+
+
+        setText(
+            "ccReminderTotal",
+            participants.length
+        );
+
+        setText(
+            "ccReminderSent",
+            sent
+        );
+
+        setText(
+            "ccReminderPending",
+            pending
+        );
+
+        setText(
+            "ccReminderFailed",
+            failed
+        );
+
+
+        if (!participants.length) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center;">
+                        No participants found.
+                    </td>
+                </tr>
+            `;
+
+            return;
+
+        }
+
+
+        participants.sort(sortByName);
+
+
+        tbody.innerHTML =
+            participants.map(
+                (person, index) => {
+
+                    const status =
+                        String(
+                            person.reminderStatus ||
+                            person.ReminderStatus ||
+                            "PENDING"
+                        ).toUpperCase();
+
+
+                    return `
+
+                        <tr>
+
+                            <td>
+
+                                <input
+                                    type="checkbox"
+                                    class="cc-person-check"
+                                    data-index="${index}"
+                                    ${status === "SENT"
+                                        ? "disabled"
+                                        : ""}>
+
+                            </td>
+
+
+                            <td>
+                                ${escapeHtml(
+                                    getPersonName(person)
+                                )}
+                            </td>
+
+
+                            <td>
+                                ${escapeHtml(
+                                    getPersonMobile(person)
+                                )}
+                            </td>
+
+
+                            <td>
+                                ${status}
+                            </td>
+
+
+                            <td>
+
+                                <div class="cc-button-row">
+
+                                    <button
+                                        type="button"
+                                        class="cc-preview"
+                                        onclick="CommunicationsCentre.previewReminder(${index})">
+
+                                        Preview
+
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        class="cc-whatsapp"
+                                        onclick="CommunicationsCentre.openManualReminderWhatsApp(${index})"
+                                        ${status === "SENT"
+                                            ? "disabled"
+                                            : ""}>
+
+                                        WhatsApp
+
+                                    </button>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    `;
+
+                }
+            ).join("");
+
+    }
+
+
+    async function openManualReminderWhatsApp(index) {
+
+        const person =
+            participants[index];
+
+        if (!person) return;
+
+
+        const status =
+            String(
+                person.reminderStatus ||
+                person.ReminderStatus ||
+                "PENDING"
+            ).toUpperCase();
+
+
+        if (status === "SENT") return;
+
+
+        const mobile =
+            getPersonMobile(person);
+
+        if (!mobile) {
+
+            alert(
+                "This participant does not have a mobile number."
+            );
+
+            return;
+
+        }
+
+
+        const message =
+            generateReminderMessage(person);
+
+
+        const result =
+            await API.post(
+                "prepareReminderWhatsApp",
+                {
+
+                    personId:
+                        getPersonId(person),
+
+                    eventId:
+                        getSpreadsheetId(selectedEvent),
+
+                    eventName:
+                        getEventName(selectedEvent),
+
+                    mobile,
+
+                    name:
+                        getPersonName(person),
+
+                    reminderType:
+                        getValue("ccReminderType"),
+
+                    message
+
+                }
+            );
+
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to prepare reminder."
+            );
+
+            return;
+
+        }
+
+
+        window.open(
+            "https://wa.me/" +
+            cleanPhone(mobile) +
+            "?text=" +
+            encodeURIComponent(message),
+            "_blank"
+        );
+
+
+        const confirmed =
+            confirm(
+                "Did you send this WhatsApp message?"
+            );
+
+
+        if (confirmed) {
+
+            await markCommunicationSent(
+                person,
+                "REMINDER",
+                getValue("ccReminderType"),
+                message
+            );
+
+        }
+
+    }
+
+
+    async function sendSelectedReminder() {
+
+        const selected =
+            [
+                ...document.querySelectorAll(
+                    ".cc-person-check:checked"
+                )
+            ];
+
+
+        if (!selected.length) {
+
+            alert(
+                "Please select at least one participant."
+            );
+
+            return;
+
+        }
+
+
+        for (const checkbox of selected) {
+
+            await openManualReminderWhatsApp(
+                Number(
+                    checkbox.dataset.index
+                )
+            );
+
+        }
+
+
+        await loadParticipants();
+
+    }
+
+
+    /* =====================================================
+       COMMUNICATION STATUS
+       ===================================================== */
+
+    async function markCommunicationSent(
+        person,
+        type,
+        stage,
+        message
+    ) {
+
+        const result =
+            await API.post(
+                "markCommunicationSent",
+                {
+
+                    personId:
+                        getPersonId(person),
+
+                    eventId:
+                        getSpreadsheetId(selectedEvent),
+
+                    eventName:
+                        getEventName(selectedEvent),
+
+                    name:
+                        getPersonName(person),
+
+                    mobile:
+                        getPersonMobile(person),
+
+                    type,
+
+                    stage,
+
+                    message
+
+                }
+            );
+
+
+        if (!result.success) {
+
+            alert(
+                result.message ||
+                "Unable to mark communication as sent."
+            );
+
+            return false;
+
+        }
+
+
+        if (type === "PUBLICITY") {
+
+            person.publicityStatus = "SENT";
+            person.PublicityStatus = "SENT";
+
+        }
+
+
+        if (type === "REMINDER") {
+
+            person.reminderStatus = "SENT";
+            person.ReminderStatus = "SENT";
+
+        }
+
+
+        if (type === "PUBLICITY") {
+
+            renderPublicityAudience();
+
+        } else {
+
+            renderParticipants();
+
+        }
+
+
+        return true;
+
+    }
+
+
+    /* =====================================================
+       PREVIEWS
+       ===================================================== */
+
+    function previewPublicityCampaign() {
+
+        const message =
+            getValue("ccPublicityMessage");
+
+        if (!message.trim()) {
+
+            alert(
+                "Please enter a publicity message."
+            );
+
+            return;
+
+        }
+
+        alert(
+            personaliseMessage(
+                message,
+                publicityAudience[0] || {}
+            )
+        );
+
+    }
+
+
+    function previewPublicityPerson(index) {
+
+        const person =
+            publicityAudience[index];
+
+        if (!person) return;
+
+        const message =
+            personaliseMessage(
+                getValue("ccPublicityMessage"),
+                person
+            );
+
+        alert(message);
+
+    }
+
+
+    function previewReminder(index) {
+
+        const person =
+            participants[index];
+
+        if (!person) return;
+
+        alert(
+            generateReminderMessage(person)
+        );
+
+    }
+
+
+    function previewReminderForFirstPerson() {
+
+        if (!participants.length) {
+
+            alert(
+                "No participants available."
+            );
+
+            return;
+
+        }
+
+        previewReminder(0);
+
+    }
+
+
+    /* =====================================================
+       SELECT ALL
+       ===================================================== */
+
+    function toggleAllPublicity(master) {
+
+        document
+            .querySelectorAll(
+                ".cc-publicity-check:not(:disabled)"
+            )
+            .forEach(cb => {
+
+                cb.checked =
+                    master.checked;
+
+            });
+
+    }
+
+
+    function toggleAllReminder(master) {
+
+        document
+            .querySelectorAll(
+                ".cc-person-check:not(:disabled)"
+            )
+            .forEach(cb => {
+
+                cb.checked =
+                    master.checked;
+
+            });
+
+    }
+
+
+    /* =====================================================
+       FILE PREVIEW
+       ===================================================== */
+
+    function handleAttachmentChange(event) {
+
+        const file =
+            event.target.files?.[0];
+
+        const name =
+            document.getElementById(
+                "ccAttachmentName"
+            );
+
+        const poster =
+            document.getElementById(
+                "ccPosterPreview"
+            );
+
+        const pdf =
+            document.getElementById(
+                "ccPdfPreview"
+            );
+
+
+        poster?.classList.add("hidden");
+        pdf?.classList.add("hidden");
+
+
+        if (!file) {
+
+            if (name) name.textContent = "";
+
+            return;
+
+        }
+
+
+        if (name) {
+            name.textContent =
+                file.name;
+        }
+
+
+        if (file.type.startsWith("image/")) {
+
+            const reader =
+                new FileReader();
+
+            reader.onload =
+                function(e) {
+
+                    if (!poster) return;
+
+                    poster.innerHTML =
+                        `<img src="${e.target.result}">`;
+
+                    poster.classList.remove(
+                        "hidden"
+                    );
+
+                };
+
+            reader.readAsDataURL(file);
+
+        }
+
+    }
+
+
+    /* =====================================================
+       HELPERS
+       ===================================================== */
+
+    function hideModules() {
+
+        document
+            .getElementById("ccPublicityModule")
+            ?.classList.add("hidden");
+
+        document
+            .getElementById("ccReminderModule")
+            ?.classList.add("hidden");
+
+    }
+
+
+    function getSpreadsheetId(event) {
+
+        return event?.spreadsheetId ||
+               event?.SpreadsheetId ||
+               event?.["Source Spreadsheet ID"] ||
+               "";
+
+    }
+
+
+    function getEventName(event) {
+
+        return event?.eventName ||
+               event?.EventName ||
+               event?.name ||
+               event?.["Event Name"] ||
+               "";
+
+    }
+
+
+    function getEventDate(event) {
+
+        return event?.eventDate ||
+               event?.EventDate ||
+               event?.date ||
+               event?.["Event Date"] ||
+               "";
+
+    }
+
+
+    function getPersonName(person) {
+
+        return person?.name ||
+               person?.Name ||
+               person?.fullName ||
+               person?.["Name"] ||
+               "Unknown";
+
+    }
+
+
+    function getPersonMobile(person) {
+
+        return person?.mobile ||
+               person?.Mobile ||
+               person?.phone ||
+               person?.Phone ||
+               person?.["Contact Number"] ||
+               "";
+
+    }
+
+
+    function getPersonId(person) {
+
+        return person?.personId ||
+               person?.PersonId ||
+               person?.id ||
+               person?.Id ||
+               getPersonMobile(person);
+
+    }
+
+
+    function getValue(id) {
+
+        return (
+            document.getElementById(id)?.value ||
+            ""
+        );
+
+    }
+
+
+    function setValue(id, value) {
+
+        const element =
+            document.getElementById(id);
+
+        if (element) {
+            element.value = value ?? "";
+        }
+
+    }
+
+
+    function setText(id, value) {
+
+        const element =
+            document.getElementById(id);
+
+        if (element) {
+            element.textContent =
+                value ?? "";
+        }
+
+    }
+
+
+    function cleanPhone(phone) {
+
+        return String(phone || "")
+            .replace(/\D/g, "");
+
+    }
+
+
+    function personaliseMessage(
+        message,
+        person
+    ) {
+
+        return String(message || "")
+            .replace(
+                /\{name\}/gi,
+                getPersonName(person)
+            )
+            .replace(
+                /\{event\}/gi,
+                getEventName(selectedEvent)
+            )
+            .replace(
+                /\{date\}/gi,
+                getEventDate(selectedEvent)
+            );
+
+    }
+
+
+    function generateReminderMessage(person) {
+
+        const custom =
+            getValue("ccCustomMessage");
+
+        if (custom.trim()) {
+
+            return personaliseMessage(
+                custom,
+                person
+            );
+
+        }
+
+
+        const name =
+            getPersonName(person);
+
+        const event =
+            getEventName(selectedEvent);
+
+        const date =
+            getEventDate(selectedEvent);
+
+        const reminderType =
+            getValue("ccReminderType");
+
+
+        return `Hi ${name}, this is a reminder about ${event} on ${date}.`;
+
+    }
+
+
+    function parseEventDate() {
+
+        if (!selectedEvent) return null;
+
+        const value =
+            getEventDate(selectedEvent);
+
+        if (!value) return null;
+
+        const date =
+            new Date(value);
+
+        return isNaN(date.getTime())
+            ? null
+            : date;
+
+    }
+
+
+    function getDaysRemaining() {
+
+        const date =
+            parseEventDate();
+
+        if (!date) return 999;
+
+        const now =
+            new Date();
+
+        now.setHours(
+            0, 0, 0, 0
+        );
+
+        date.setHours(
+            0, 0, 0, 0
+        );
+
+        return Math.ceil(
+            (date - now) /
+            86400000
+        );
+
+    }
+
+
+    function isReminderAvailable() {
+
+        const days =
+            getDaysRemaining();
+
+        return days >= 0 &&
+               days <= 7;
+
+    }
+
+
+    function determineDefaultReminderStage(
+        days
+    ) {
+
+        if (days <= 1) return "T-1";
+
+        if (days <= 3) return "T-3";
+
+        return "T-7";
+
+    }
+
+
+    function dedupePeople(list) {
+
+        const map =
+            new Map();
+
+        list.forEach(person => {
+
+            const key =
+                cleanPhone(
+                    getPersonMobile(person)
+                ) ||
+                String(
+                    getPersonId(person)
+                );
+
+            if (!map.has(key)) {
+                map.set(key, person);
+            }
+
+        });
+
+        return [...map.values()];
+
+    }
+
+
+    function sortByName(a, b) {
+
+        return getPersonName(a)
+            .localeCompare(
+                getPersonName(b)
+            );
+
+    }
+
+
+    function escapeHtml(value) {
+
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    function goBack() {
+
+        showSection("events");
+
+    }
+
+
+    /* =====================================================
+       PUBLIC API
+       ===================================================== */
+
+    return {
+
+        init,
+        loadEvents,
+        selectEvent,
+        selectActivity,
+
+        previewPublicityCampaign,
+        previewPublicityPerson,
+        savePublicityConfiguration,
+        openManualPublicityWhatsApp,
+        sendSelectedPublicity,
+        refreshPublicityAudience:
+            loadPublicityAudience,
+        toggleAllPublicity,
+
+        changeReminderType,
+        saveReminderConfig,
+        previewReminderForFirstPerson,
+        loadParticipants,
+        previewReminder,
+        openManualReminderWhatsApp,
+        sendSelectedReminder,
+        toggleAllReminder,
+
+        goBack
+
+    };
+
+})();
+
 
 </script>
 
