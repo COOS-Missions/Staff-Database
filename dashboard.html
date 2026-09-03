@@ -5956,2420 +5956,806 @@ async function deleteEvent(id) {
 
 window.CommunicationsCentre = (() => {
 
-
-    /* =========================================================
-       GLOBAL STATE
-    ========================================================= */
-
+    /* ================= STATE ================= */
     let events = [];
     let selectedEvent = null;
-
     let currentActivity = "";
-
     let participants = [];
     let publicityAudience = [];
-
     let reminderConfig = {};
     let publicityConfig = {};
-
     let initialised = false;
 
+    const params = new URLSearchParams(window.location.search);
+    const presetEvent = params.get("event");
 
-    /* =========================================================
-       URL PARAMETERS
-    ========================================================= */
-
-    const params =
-        new URLSearchParams(
-            window.location.search
-        );
-
-    const presetEvent =
-        params.get("event");
-
-
-    /* =========================================================
-       INITIALISATION
-    ========================================================= */
-
+    /* ================= INIT ================= */
     async function cinit() {
-
-        console.log(
-            "CommunicationsCentre.cinit() CALLED"
-        );
-
-        console.log(
-            "eventFilter:",
-            document.getElementById(
-                "eventFilter"
-            )
-        );
-
-        /*
-         * Communications Centre does NOT bind
-         * Event Management listeners.
-         *
-         * Event Management is responsible for
-         * its own bindings.
-         */
-
         if (!initialised) {
+            initialiseAttachmentListener();
             initialised = true;
         }
-
-        /*
-         * Always reload events whenever the
-         * Communications Centre is opened.
-         */
         await loadEvents();
     }
 
-
-    /* =========================================================
-       LOAD EVENTS
-    ========================================================= */
-
+    /* ================= LOAD EVENTS ================= */
     async function loadEvents() {
-
-        console.log(
-            "CommunicationsCentre.loadEvents() CALLED"
-        );
-
         try {
-
-            const response =
-                await API.post(
-                    "getEventList",
-                    {}
-                );
-
-            console.log(
-                "getEventList RESPONSE:",
-                response
-            );
-
-
-            if (
-                !response ||
-                !response.success
-            ) {
-
-                throw new Error(
-                    response?.message ||
-                    "Unable to load events."
-                );
+            const response = await API.post("getEventList", {});
+            if (!response || !response.success) {
+                throw new Error(response?.message || "Unable to load events.");
             }
 
+            events = Array.isArray(response.data) ? response.data : [];
 
-            console.log(
-                "getEventList DATA:",
-                response.data
+            // Communications Centre only works with ACTIVE events
+            events = events.filter(
+                e => String(e.status || e.Status || "").toUpperCase() === "ACTIVE"
             );
-
-
-            /*
-             * IMPORTANT:
-             *
-             * Do NOT filter by ACTIVE yet.
-             *
-             * We first want to confirm the
-             * actual structure returned by the API.
-             */
-            events =
-                Array.isArray(
-                    response.data
-                )
-                    ? response.data
-                    : [];
-
-
-            console.log(
-                "Communications Centre EVENTS:",
-                events
-            );
-
 
             populateEventDropdown();
 
-
+            const info = document.getElementById("ccSelectedEventInfo");
+            if (events.length === 0 && info) {
+                info.classList.remove("hidden");
+                info.innerHTML = `<div>No active events are currently available.</div>`;
+            }
         } catch (error) {
-
-            console.error(
-                "Communications Centre - loadEvents:",
-                error
-            );
-
-
-            const info =
-                document.getElementById(
-                    "ccSelectedEventInfo"
-                );
-
-
+            console.error("Communications Centre - loadEvents:", error);
+            const info = document.getElementById("ccSelectedEventInfo");
             if (info) {
-
-                info.innerHTML =
-                    `<div class="error-message">
-                        ${escapeHtml(
-                            error.message ||
-                            "Unable to load events."
-                        )}
-                    </div>`;
+                info.classList.remove("hidden");
+                info.innerHTML = `<div>${escapeHtml(error.message || "Unable to load events.")}</div>`;
             }
         }
     }
-
-
-    /* =========================================================
-       POPULATE EVENT DROPDOWN
-    ========================================================= */
 
     function populateEventDropdown() {
+        const select = document.getElementById("ccEventFilter");
+        if (!select) return;
 
-        console.log(
-            "populateEventDropdown()"
-        );
+        select.innerHTML = `<option value="">Select an active event...</option>`;
 
+        events.forEach(event => {
+            const id = event.spreadsheetId || event.SpreadsheetId || event.id || event.eventId || "";
+            const name = getEventName(event);
+            const date = getEventDate(event);
 
-        const select =
-            document.getElementById(
-                "ccEventFilter"
-            );
+            const option = document.createElement("option");
+            option.value = id;
+            option.textContent = date ? `${name} — ${date}` : name;
+            select.appendChild(option);
+        });
 
-
-        if (!select) {
-
-            console.error(
-                "Communications Centre: #eventFilter not found."
-            );
-
-            return;
-        }
-
-
-        console.log(
-            "Populating event dropdown with:",
-            events
-        );
-
-
-        select.innerHTML = `
-            <option value="">
-                Select Event
-            </option>
-        `;
-
-
-        events.forEach(
-            (event, index) => {
-
-                console.log(
-                    "Processing event:",
-                    index,
-                    event
-                );
-
-
-                const spreadsheetId =
-                    event.spreadsheetId ||
-                    event.spreadsheetID ||
-                    event.id ||
-                    event.eventId ||
-                    "";
-
-
-                const eventName =
-                    getEventName(
-                        event
-                    );
-
-
-                const eventDate =
-                    getEventDate(
-                        event
-                    );
-
-
-                if (!spreadsheetId) {
-
-                    console.warn(
-                        "Event has no spreadsheet ID:",
-                        event
-                    );
-                }
-
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-
-                option.value =
-                    spreadsheetId;
-
-
-                option.textContent =
-                    eventDate
-                        ? `${eventName} — ${eventDate}`
-                        : eventName;
-
-
-                select.appendChild(
-                    option
-                );
-            }
-        );
-
-
-        /*
-         * Apply preset event if supplied
-         * through the URL.
-         */
         if (presetEvent) {
-
-            const matchingEvent =
-                events.find(
-                    event => {
-
-                        const id =
-                            event.spreadsheetId ||
-                            event.spreadsheetID ||
-                            event.id ||
-                            event.eventId ||
-                            "";
-
-                        return String(id) ===
-                               String(presetEvent);
-                    }
-                );
-
-
-            if (matchingEvent) {
-
-                select.value =
-                    matchingEvent.spreadsheetId ||
-                    matchingEvent.spreadsheetID ||
-                    matchingEvent.id ||
-                    matchingEvent.eventId ||
-                    "";
-
-
-                selectEvent();
-            }
+            select.value = presetEvent;
+            selectEvent();
         }
     }
 
-
-    /* =========================================================
-       SELECT EVENT
-    ========================================================= */
-
+    /* ================= SELECT EVENT ================= */
     function selectEvent() {
+        const select = document.getElementById("ccEventFilter");
+        if (!select) return;
 
-        console.log(
-            "CommunicationsCentre.selectEvent()"
-        );
-
-
-        const select =
-            document.getElementById(
-                "ccEventFilter"
-            );
-
-
-        if (!select) {
-            return;
-        }
-
-
-        const selectedId =
-            select.value;
-
-
-        console.log(
-            "Selected event ID:",
-            selectedId
-        );
-
+        const selectedId = select.value;
 
         if (!selectedId) {
-
             selectedEvent = null;
-
+            currentActivity = "";
             hideAllModules();
-
-            const info =
-                document.getElementById(
-                    "ccSelectedEventInfo"
-                );
-
+            document.getElementById("ccActivityCard")?.classList.add("hidden");
+            document.getElementById("ccLifecycleCard")?.classList.add("hidden");
+            const info = document.getElementById("ccSelectedEventInfo");
             if (info) {
+                info.classList.add("hidden");
                 info.innerHTML = "";
             }
-
             return;
         }
 
+        selectedEvent = events.find(e => {
+            const id = e.spreadsheetId || e.SpreadsheetId || e.id || e.eventId || "";
+            return String(id) === String(selectedId);
+        });
 
-        selectedEvent =
-            events.find(
-                event => {
+        if (!selectedEvent) return;
 
-                    const id =
-                        event.spreadsheetId ||
-                        event.spreadsheetID ||
-                        event.id ||
-                        event.eventId ||
-                        "";
+        selectedEvent.spreadsheetId = selectedEvent.spreadsheetId || selectedEvent.SpreadsheetId || selectedEvent.id || selectedEvent.eventId || "";
+        selectedEvent.eventName = getEventName(selectedEvent);
+        selectedEvent.eventDate = getEventDate(selectedEvent);
 
-                    return String(id) ===
-                           String(selectedId);
-                }
-            );
-
-
-        console.log(
-            "Selected event:",
-            selectedEvent
-        );
-
-
-        if (!selectedEvent) {
-
-            console.warn(
-                "Selected event not found:",
-                selectedId
-            );
-
-            return;
-        }
-
-
-        /*
-         * Normalise event fields.
-         */
-        selectedEvent.spreadsheetId =
-            selectedEvent.spreadsheetId ||
-            selectedEvent.spreadsheetID ||
-            selectedEvent.id ||
-            selectedEvent.eventId ||
-            "";
-
-
-        selectedEvent.eventName =
-            getEventName(
-                selectedEvent
-            );
-
-
-        selectedEvent.eventDate =
-            getEventDate(
-                selectedEvent
-            );
-
-
-        /*
-         * Display selected event.
-         */
-        const info =
-            document.getElementById(
-                "ccSelectedEventInfo"
-            );
-
-
+        const info = document.getElementById("ccSelectedEventInfo");
         if (info) {
-
+            info.classList.remove("hidden");
             info.innerHTML = `
-                <strong>
-                    ${escapeHtml(
-                        selectedEvent.eventName
-                    )}
-                </strong>
-
-                ${
-                    selectedEvent.eventDate
-                        ? `
-                            <span>
-                                ${escapeHtml(
-                                    selectedEvent.eventDate
-                                )}
-                            </span>
-                          `
-                        : ""
-                }
+                <div class="cc-event-title">
+                    <div>${escapeHtml(selectedEvent.eventName)}</div>
+                    <div>📅 ${escapeHtml(selectedEvent.eventDate)}</div>
+                </div>
             `;
         }
 
+        document.getElementById("ccActivityCard")?.classList.remove("hidden");
+        document.getElementById("ccLifecycleCard")?.classList.remove("hidden");
 
-        /*
-         * Show activity card.
-         */
-        const activityCard =
-            document.getElementById(
-                "ccActivityCard"
-            );
-
-
-        if (activityCard) {
-
-            activityCard.style.display =
-                "block";
-        }
-
-
-        /*
-         * Show lifecycle card.
-         */
-        const lifecycleCard =
-            document.getElementById(
-                "ccLifecycleCard"
-            );
-
-
-        if (lifecycleCard) {
-
-            lifecycleCard.style.display =
-                "block";
-        }
-
-
-        /*
-         * Reset activity.
-         */
         currentActivity = "";
-
-
-        document
-            .querySelectorAll(
-                ".activity-btn"
-            )
-            .forEach(
-                button => {
-
-                    button.classList.remove(
-                        "active"
-                    );
-                }
-            );
-
+        document.getElementById("ccPublicityActivityButton")?.classList.remove("active");
+        document.getElementById("ccReminderActivityButton")?.classList.remove("active");
 
         hideAllModules();
-
         updateLifecycleStatus();
     }
 
+    /* ================= DATES ================= */
+    function parseEventDate(value) {
+        if (!value) return null;
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) return date;
 
-    /* =========================================================
-       EVENT DATE
-    ========================================================= */
-
-    function parseEventDate(
-        value
-    ) {
-
-        if (!value) {
-            return null;
+        const match = String(value).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (match) {
+            const parsed = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+            if (!Number.isNaN(parsed.getTime())) return parsed;
         }
-
-
-        const date =
-            new Date(
-                value
-            );
-
-
-        if (
-            Number.isNaN(
-                date.getTime()
-            )
-        ) {
-
-            return null;
-        }
-
-
-        return date;
+        return null;
     }
-
 
     function getDaysRemaining() {
+        if (!selectedEvent) return null;
+        const eventDate = parseEventDate(selectedEvent.eventDate);
+        if (!eventDate) return null;
 
-        if (!selectedEvent) {
-            return null;
-        }
+        eventDate.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-
-        const eventDate =
-            parseEventDate(
-                getEventDate(
-                    selectedEvent
-                )
-            );
-
-
-        if (!eventDate) {
-            return null;
-        }
-
-
-        const now =
-            new Date();
-
-
-        const diff =
-            eventDate.getTime() -
-            now.getTime();
-
-
-        return Math.ceil(
-            diff /
-            (
-                1000 *
-                60 *
-                60 *
-                24
-            )
-        );
+        return Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
     }
 
+    function getReminderAvailability() {
+        const days = getDaysRemaining();
+        if (days === null) return { available: false, reason: "Event date unavailable." };
+        if (days < 0) return { available: false, reason: "Event has already taken place." };
+        if (days <= 7) return { available: true, reason: "Reminder communication is available." };
+        return { available: false, reason: `Reminder available within 7 days of the event. ${days} days remaining.` };
+    }
 
-    /* =========================================================
-       LIFECYCLE
-    ========================================================= */
-
+    /* ================= LIFECYCLE ================= */
     function updateLifecycleStatus() {
+        if (!selectedEvent) return;
 
-        if (!selectedEvent) {
-            return;
+        const days = getDaysRemaining();
+        const reminder = getReminderAvailability();
+
+        const status = document.getElementById("ccLifecycleStatus");
+        if (status) {
+            status.innerHTML = `
+                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <strong>📢 Publicity</strong>
+                    <span class="badge badge-green">AVAILABLE</span>
+                </div>
+                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <strong>⏰ Reminder</strong>
+                    <span class="badge ${reminder.available ? "badge-green" : "badge-yellow"}">
+                        ${reminder.available ? "AVAILABLE" : "NOT YET AVAILABLE"}
+                    </span>
+                </div>
+                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
+                    <strong>Event</strong>
+                    <span>${days === null ? "Unknown" : days === 0 ? "Today" : days > 0 ? `${days} day(s) remaining` : "Event completed"}</span>
+                </div>
+            `;
         }
 
+        const availabilityText = document.getElementById("ccReminderAvailabilityText");
+        if (availabilityText) availabilityText.textContent = reminder.reason;
 
-        const days =
-            getDaysRemaining();
-
-
-        const reminderButton =
-            document.getElementById(
-                "ccReminderActivityBtn"
-            );
-
-
-        if (!reminderButton) {
-            return;
-        }
-
-
-        /*
-         * Reminder available only within
-         * 7 days before event.
-         */
-        if (
-            days !== null &&
-            days >= 0 &&
-            days <= 7
-        ) {
-
-            reminderButton.disabled =
-                false;
-
-            reminderButton.classList.remove(
-                "disabled"
-            );
-
-        } else {
-
-            reminderButton.disabled =
-                true;
-
-            reminderButton.classList.add(
-                "disabled"
-            );
-        }
+        const reminderButton = document.getElementById("ccReminderActivityButton");
+        if (reminderButton) reminderButton.classList.toggle("disabled", !reminder.available);
     }
 
-
-    /* =========================================================
-       SELECT ACTIVITY
-    ========================================================= */
-
-    async function selectActivity(
-        activity
-    ) {
-
+    /* ================= ACTIVITY ================= */
+    async function selectActivity(activity) {
         if (!selectedEvent) {
-
-            alert(
-                "Please select an event first."
-            );
-
+            alert("Please select an event first.");
             return;
         }
 
-
-        if (
-            activity ===
-            "reminder"
-        ) {
-
-            const days =
-                getDaysRemaining();
-
-
-            if (
-                days === null ||
-                days < 0 ||
-                days > 7
-            ) {
-
-                alert(
-                    "Reminder is only available within 7 days before the event."
-                );
-
+        if (activity === "reminder") {
+            const availability = getReminderAvailability();
+            if (!availability.available) {
+                alert(availability.reason);
                 return;
             }
         }
 
-
-        currentActivity =
-            activity;
-
-
-        document
-            .querySelectorAll(
-                ".activity-btn"
-            )
-            .forEach(
-                button => {
-
-                    button.classList.remove(
-                        "active"
-                    );
-                }
-            );
-
-
-        const button =
-            document.querySelector(
-                `[data-activity="${activity}"]`
-            );
-
-
-        if (button) {
-
-            button.classList.add(
-                "active"
-            );
-        }
-
+        currentActivity = activity;
+        document.getElementById("ccPublicityActivityButton")?.classList.remove("active");
+        document.getElementById("ccReminderActivityButton")?.classList.remove("active");
+        document.getElementById(activity === "publicity" ? "ccPublicityActivityButton" : "ccReminderActivityButton")?.classList.add("active");
 
         hideAllModules();
 
-
-        if (
-            activity ===
-            "publicity"
-        ) {
-
+        if (activity === "publicity") {
             await loadPublicity();
-
-        } else if (
-            activity ===
-            "reminder"
-        ) {
-
+        } else if (activity === "reminder") {
             await loadReminder();
         }
     }
 
-
-    /* =========================================================
-       HIDE MODULES
-    ========================================================= */
-
     function hideAllModules() {
-
-        const modules = [
-            "ccPublicityModule",
-            "ccReminderModule"
-        ];
-
-
-        modules.forEach(
-            id => {
-
-                const element =
-                    document.getElementById(
-                        id
-                    );
-
-
-                if (element) {
-
-                    element.style.display =
-                        "none";
-                }
-            }
-        );
+        document.getElementById("ccPublicityModule")?.classList.add("hidden");
+        document.getElementById("ccReminderModule")?.classList.add("hidden");
     }
 
-
-    function hideModules() {
-
-        hideAllModules();
-    }
-
-
-    /* =========================================================
-       PUBLICITY
-    ========================================================= */
-
+    /* ================= PUBLICITY ================= */
     async function loadPublicity() {
+        if (!selectedEvent) return;
 
-        if (!selectedEvent) {
-            return;
-        }
-
-
-        const module =
-            document.getElementById(
-                "ccPublicityModule"
-            );
-
-
-        if (module) {
-
-            module.style.display =
-                "block";
-        }
-
+        document.getElementById("ccPublicityModule")?.classList.remove("hidden");
 
         publicityConfig = {
-
-            spreadsheetId:
-                selectedEvent.spreadsheetId,
-
-            eventName:
-                getEventName(
-                    selectedEvent
-                ),
-
-            eventDate:
-                getEventDate(
-                    selectedEvent
-                ),
-
-            message: "",
-
-            attachmentName: ""
-        };
-
-
-        try {
-
-            const response =
-                await API.post(
-                    "getPublicityConfiguration",
-                    {
-                        data:
-                            JSON.stringify({
-                                spreadsheetId:
-                                    selectedEvent.spreadsheetId
-                            })
-                    }
-                );
-
-
-            if (
-                response &&
-                response.success &&
-                response.data
-            ) {
-
-                publicityConfig = {
-                    ...publicityConfig,
-                    ...response.data
-                };
-
-
-                const messageBox =
-                    document.getElementById(
-                        "ccPublicityMessage"
-                    );
-
-
-                if (messageBox) {
-
-                    messageBox.value =
-                        publicityConfig.message ||
-                        "";
-                }
-
-
-                const name =
-                    document.getElementById(
-                        "ccPublicityAttachmentName"
-                    );
-
-
-                if (name) {
-
-                    name.textContent =
-                        publicityConfig
-                            .attachmentName ||
-                        "";
-                }
-            }
-
-
-            await loadPublicityAudience();
-
-
-        } catch (error) {
-
-            console.error(
-                "loadPublicity:",
-                error
-            );
-        }
-    }
-
-
-    async function loadPublicityAudience() {
-
-        if (!selectedEvent) {
-            return;
-        }
-
-
-        const response =
-            await API.post(
-                "getPublicityAudience",
-                {
-                    spreadsheetId:
-                        selectedEvent
-                            .spreadsheetId
-                }
-            );
-
-
-        if (
-            !response ||
-            !response.success
-        ) {
-
-            throw new Error(
-                response?.message ||
-                "Unable to load publicity audience."
-            );
-        }
-
-
-        publicityAudience =
-            deduplicatePeople(
-                response.data || []
-            );
-
-
-        sortByName(
-            publicityAudience
-        );
-
-
-        renderPublicityAudience();
-    }
-
-
-    function renderPublicityAudience() {
-
-        const container =
-            document.getElementById(
-                "ccPublicityAudience"
-            );
-
-
-        if (!container) {
-            return;
-        }
-
-
-        const sent =
-            publicityAudience.filter(
-                person =>
-                    String(
-                        person.publicityStatus ||
-                        ""
-                    ).toUpperCase() ===
-                    "SENT"
-            ).length;
-
-
-        const pending =
-            publicityAudience.length -
-            sent;
-
-
-        const sentCount =
-            document.getElementById(
-                "ccPublicitySentCount"
-            );
-
-
-        if (sentCount) {
-
-            sentCount.textContent =
-                sent;
-        }
-
-
-        const pendingCount =
-            document.getElementById(
-                "ccPublicityPendingCount"
-            );
-
-
-        if (pendingCount) {
-
-            pendingCount.textContent =
-                pending;
-        }
-
-
-        container.innerHTML =
-            publicityAudience
-                .map(
-                    (
-                        person,
-                        index
-                    ) => {
-
-                        const status =
-                            String(
-                                person.publicityStatus ||
-                                "PENDING"
-                            ).toUpperCase();
-
-
-                        const isSent =
-                            status ===
-                            "SENT";
-
-
-                        return `
-
-                            <div class="audience-row">
-
-                                <input
-                                    type="checkbox"
-                                    class="cc-publicity-check"
-                                    data-index="${index}"
-                                    ${
-                                        isSent
-                                            ? "disabled"
-                                            : ""
-                                    }
-                                >
-
-                                <div class="audience-name">
-                                    ${escapeHtml(
-                                        getPersonName(
-                                            person
-                                        )
-                                    )}
-                                </div>
-
-                                <div class="audience-mobile">
-                                    ${escapeHtml(
-                                        getPersonMobile(
-                                            person
-                                        )
-                                    )}
-                                </div>
-
-                                <div class="audience-status ${
-                                    isSent
-                                        ? "sent"
-                                        : "pending"
-                                }">
-                                    ${
-                                        isSent
-                                            ? "SENT"
-                                            : "PENDING"
-                                    }
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onclick="window.CommunicationsCentre.previewPublicityPerson(${index})"
-                                >
-                                    Preview
-                                </button>
-
-                                ${
-                                    !isSent
-                                        ? `
-                                            <button
-                                                type="button"
-                                                onclick="window.CommunicationsCentre.openManualPublicityWhatsApp(${index})"
-                                            >
-                                                WhatsApp
-                                            </button>
-                                          `
-                                        : ""
-                                }
-
-                            </div>
-                        `;
-                    }
-                )
-                .join("");
-    }
-
-
-    function previewPublicityCampaign() {
-
-        const message =
-            document.getElementById(
-                "ccPublicityMessage"
-            )?.value || "";
-
-
-        if (!message.trim()) {
-
-            alert(
-                "Please enter a publicity message."
-            );
-
-            return;
-        }
-
-
-        alert(
-            personaliseMessage(
-                message,
-                publicityAudience[0]
-            )
-        );
-    }
-
-
-    function previewPublicityPerson(
-        index
-    ) {
-
-        const person =
-            publicityAudience[index];
-
-
-        if (!person) {
-            return;
-        }
-
-
-        const message =
-            document.getElementById(
-                "ccPublicityMessage"
-            )?.value || "";
-
-
-        alert(
-            personaliseMessage(
-                message,
-                person
-            )
-        );
-    }
-
-
-    function openManualPublicityWhatsApp(
-        index
-    ) {
-
-        const person =
-            publicityAudience[index];
-
-
-        if (!person) {
-            return;
-        }
-
-
-        const status =
-            String(
-                person.publicityStatus ||
-                ""
-            ).toUpperCase();
-
-
-        if (status === "SENT") {
-
-            alert(
-                "This publicity has already been sent."
-            );
-
-            return;
-        }
-
-
-        const mobile =
-            getPersonMobile(
-                person
-            );
-
-
-        if (!mobile) {
-
-            alert(
-                "This person does not have a mobile number."
-            );
-
-            return;
-        }
-
-
-        const message =
-            document.getElementById(
-                "ccPublicityMessage"
-            )?.value || "";
-
-
-        if (!message.trim()) {
-
-            alert(
-                "Please enter a publicity message first."
-            );
-
-            return;
-        }
-
-
-        const personalised =
-            personaliseMessage(
-                message,
-                person
-            );
-
-
-        const phone =
-            normalisePhone(
-                mobile
-            );
-
-
-        window.open(
-            `https://wa.me/${phone}?text=${encodeURIComponent(
-                personalised
-            )}`,
-            "_blank"
-        );
-
-
-        markCommunicationSent(
-            person,
-            "PUBLICITY",
-            "",
-            personalised
-        );
-    }
-
-
-    async function savePublicityConfiguration() {
-
-        if (!selectedEvent) {
-            return;
-        }
-
-
-        const message =
-            document.getElementById(
-                "ccPublicityMessage"
-            )?.value || "";
-
-
-        publicityConfig.message =
-            message;
-
-
-        const response =
-            await API.post(
-                "savePublicityConfiguration",
-                {
-
-                    spreadsheetId:
-                        selectedEvent
-                            .spreadsheetId,
-
-                    eventName:
-                        getEventName(
-                            selectedEvent
-                        ),
-
-                    eventDate:
-                        getEventDate(
-                            selectedEvent
-                        ),
-
-                    message,
-
-                    attachmentName:
-                        publicityConfig
-                            .attachmentName ||
-                        ""
-                }
-            );
-
-
-        if (
-            !response ||
-            !response.success
-        ) {
-
-            throw new Error(
-                response?.message ||
-                "Unable to save publicity configuration."
-            );
-        }
-
-
-        alert(
-            "Publicity configuration saved."
-        );
-    }
-
-
-    async function refreshPublicityAudience() {
-
-        await loadPublicityAudience();
-    }
-
-
-    async function preparePublicityWhatsApp(
-        person,
-        message
-    ) {
-
-        return await API.post(
-            "preparePublicityWhatsApp",
-            {
-
-                spreadsheetId:
-                    selectedEvent
-                        ?.spreadsheetId,
-
-                eventName:
-                    getEventName(
-                        selectedEvent
-                    ),
-
-                personId:
-                    getPersonId(
-                        person
-                    ),
-
-                name:
-                    getPersonName(
-                        person
-                    ),
-
-                mobile:
-                    getPersonMobile(
-                        person
-                    ),
-
-                message
-            }
-        );
-    }
-
-
-    async function sendSelectedPublicity() {
-
-        const selected =
-            Array.from(
-                document.querySelectorAll(
-                    ".cc-publicity-check:checked"
-                )
-            );
-
-
-        if (!selected.length) {
-
-            alert(
-                "Please select at least one person."
-            );
-
-            return;
-        }
-
-
-        if (
-            !confirm(
-                `Send publicity to ${selected.length} selected person(s)?`
-            )
-        ) {
-
-            return;
-        }
-
-
-        for (
-            const checkbox of selected
-        ) {
-
-            const index =
-                Number(
-                    checkbox.dataset.index
-                );
-
-
-            await openManualPublicityWhatsApp(
-                index
-            );
-        }
-
-
-        await loadPublicityAudience();
-    }
-
-
-    /* =========================================================
-       REMINDER
-    ========================================================= */
-
-    async function loadReminder() {
-
-        if (!selectedEvent) {
-            return;
-        }
-
-
-        const days =
-            getDaysRemaining();
-
-
-        if (
-            days === null ||
-            days < 0 ||
-            days > 7
-        ) {
-
-            alert(
-                "Reminder is only available within 7 days before the event."
-            );
-
-            return;
-        }
-
-
-        const module =
-            document.getElementById(
-                "reminderModule"
-            );
-
-
-        if (module) {
-
-            module.style.display =
-                "block";
-        }
-
-
-        reminderConfig = {
-
-            spreadsheetId:
-                selectedEvent
-                    .spreadsheetId,
-
-            eventName:
-                getEventName(
-                    selectedEvent
-                ),
-
-            eventDate:
-                getEventDate(
-                    selectedEvent
-                ),
-
-            reminderType:
-                determineDefaultReminderStage(),
-
+            spreadsheetId: selectedEvent.spreadsheetId,
+            eventName: selectedEvent.eventName,
+            eventDate: selectedEvent.eventDate,
             message: ""
         };
 
+        document.getElementById("ccPublicityEventName").textContent = selectedEvent.eventName;
+        document.getElementById("ccPublicityEventDate").textContent = "📅 " + selectedEvent.eventDate;
 
+        try {
+            const response = await API.post("getPublicityConfiguration", {
+                data: JSON.stringify({ spreadsheetId: selectedEvent.spreadsheetId })
+            });
+
+            if (response && response.success && response.data) {
+                publicityConfig = { ...publicityConfig, ...response.data };
+                document.getElementById("ccPublicityMessage").value = publicityConfig.message || "";
+                document.getElementById("ccAttachmentName").textContent =
+                    publicityConfig.attachmentName ? `Saved poster: ${publicityConfig.attachmentName}` : "";
+            }
+        } catch (error) {
+            console.warn("loadPublicity:", error);
+        }
+
+        await loadPublicityAudience();
+    }
+
+    async function loadPublicityAudience() {
+        if (!selectedEvent) return;
+
+        try {
+            const response = await API.post("getPublicityAudience", { spreadsheetId: selectedEvent.spreadsheetId });
+            if (!response || !response.success) throw new Error(response?.message || "Unable to load publicity audience.");
+
+            publicityAudience = deduplicatePeople(response.data || []);
+            sortByName(publicityAudience);
+            renderPublicityAudience();
+        } catch (error) {
+            console.error(error);
+            const table = document.getElementById("ccPublicityTable");
+            if (table) table.innerHTML = `<tr><td colspan="6">Unable to load publicity audience.</td></tr>`;
+        }
+    }
+
+    function renderPublicityAudience() {
+        const table = document.getElementById("ccPublicityTable");
+        if (!table) return;
+
+        let sent = 0, pending = 0, registered = 0;
+        publicityAudience.forEach(p => {
+            const status = String(p.publicityStatus || p.PublicityStatus || "PENDING").toUpperCase();
+            status === "SENT" ? sent++ : pending++;
+            if (String(p.engagement || p.Engagement || "").toLowerCase() === "registered") registered++;
+        });
+
+        document.getElementById("ccPublicityTotal").textContent = publicityAudience.length;
+        document.getElementById("ccPublicitySent").textContent = sent;
+        document.getElementById("ccPublicityPending").textContent = pending;
+        document.getElementById("ccPublicityRegistered").textContent = registered;
+
+        if (publicityAudience.length === 0) {
+            table.innerHTML = `<tr><td colspan="6">No publicity audience found.</td></tr>`;
+            return;
+        }
+
+        table.innerHTML = publicityAudience.map((p, index) => {
+            const status = String(p.publicityStatus || p.PublicityStatus || "PENDING").toUpperCase();
+            const statusClass = status === "SENT" ? "badge-green" : status === "FAILED" ? "badge-red" : "badge-yellow";
+            const engagement = p.engagement || p.Engagement || "Not Registered";
+
+            return `
+                <tr>
+                    <td><input type="checkbox" class="cc-publicity-check" value="${index}" ${status === "SENT" ? "disabled" : ""}></td>
+                    <td>${escapeHtml(getPersonName(p))}</td>
+                    <td>${escapeHtml(getPersonMobile(p))}</td>
+                    <td><span class="badge badge-blue">${escapeHtml(engagement)}</span></td>
+                    <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                    <td>
+                        <button type="button" onclick="CommunicationsCentre.previewPublicityPerson(${index})">Preview</button>
+                        ${status !== "SENT" ? `<button type="button" onclick="CommunicationsCentre.openManualPublicityWhatsApp(${index})">WhatsApp</button>` : ""}
+                    </td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function previewPublicityCampaign() {
+        if (!selectedEvent) return;
+        const message = document.getElementById("ccPublicityMessage").value;
+        const poster = document.getElementById("ccAttachmentName").textContent;
+        alert(`PUBLICITY PREVIEW\n\nEvent: ${selectedEvent.eventName}\nDate: ${selectedEvent.eventDate}\n\nMessage:\n${message}\n\nPoster: ${poster || "No poster selected"}`);
+    }
+
+    function previewPublicityPerson(index) {
+        const person = publicityAudience[index];
+        if (!person) return;
+        const message = personaliseMessage(document.getElementById("ccPublicityMessage").value, person);
+        alert(`To: ${getPersonName(person)}\n\n${message}`);
+    }
+
+    async function savePublicityConfiguration() {
+        if (!selectedEvent) return;
+
+        const message = document.getElementById("ccPublicityMessage").value;
+        if (!message.trim()) {
+            alert("Please enter a publicity message first.");
+            return;
+        }
+
+        publicityConfig.message = message;
+        const file = document.getElementById("ccpublicityAttachment").files[0];
+        if (file) publicityConfig.attachmentName = file.name;
+
+        try {
+            const response = await API.post("savePublicityConfiguration", {
+                spreadsheetId: selectedEvent.spreadsheetId,
+                eventName: selectedEvent.eventName,
+                eventDate: selectedEvent.eventDate,
+                message: publicityConfig.message,
+                attachmentName: publicityConfig.attachmentName || ""
+            });
+            if (!response || !response.success) throw new Error(response?.message || "Unable to save publicity.");
+            alert("Publicity configuration saved.");
+        } catch (error) {
+            console.error(error);
+            alert("Unable to save publicity configuration.\n\n" + error.message);
+        }
+    }
+
+    async function refreshPublicityAudience() {
+        await loadPublicityAudience();
+    }
+
+    async function preparePublicityWhatsApp(person, message) {
+        try {
+            const response = await API.post("preparePublicityWhatsApp", {
+                personId: getPersonId(person),
+                eventId: selectedEvent.spreadsheetId,
+                eventName: selectedEvent.eventName,
+                mobile: getPersonMobile(person),
+                name: getPersonName(person),
+                message
+            });
+            if (!response.success) throw new Error(response.message || "Unable to prepare WhatsApp message");
+            return response;
+        } catch (error) {
+            console.warn("preparePublicityWhatsApp:", error);
+            return null;
+        }
+    }
+
+    async function openManualPublicityWhatsApp(index) {
+        const person = publicityAudience[index];
+        if (!person) return;
+
+        const status = String(person.publicityStatus || person.PublicityStatus || "").toUpperCase();
+        if (status === "SENT") { alert(getPersonName(person) + " has already received publicity."); return; }
+
+        const phone = normalisePhone(getPersonMobile(person));
+        if (!phone) { alert(getPersonName(person) + " does not have a valid mobile number."); return; }
+
+        const baseMessage = document.getElementById("ccPublicityMessage").value;
+        if (!baseMessage.trim()) { alert("Please prepare the publicity message first."); return; }
+
+        const message = personaliseMessage(baseMessage, person);
+
+        await preparePublicityWhatsApp(person, message);
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+        await markCommunicationSent(person, "PUBLICITY", "", message);
+    }
+
+    async function sendSelectedPublicity() {
+        const selected = document.querySelectorAll(".cc-publicity-check:checked");
+        if (selected.length === 0) { alert("Please select people first."); return; }
+        if (!confirm(`Open WhatsApp for ${selected.length} selected people?`)) return;
+
+        for (const checkbox of selected) {
+            await openManualPublicityWhatsApp(Number(checkbox.value));
+        }
+        await loadPublicityAudience();
+    }
+
+    /* ================= REMINDER ================= */
+    async function loadReminder() {
+        if (!selectedEvent) return;
+
+        const availability = getReminderAvailability();
+        if (!availability.available) { alert(availability.reason); return; }
+
+        document.getElementById("ccReminderModule")?.classList.remove("hidden");
+
+        reminderConfig = {
+            spreadsheetId: selectedEvent.spreadsheetId,
+            eventName: selectedEvent.eventName,
+            eventDate: selectedEvent.eventDate,
+            reminderType: determineDefaultReminderStage()
+        };
+
+        document.getElementById("ccReminderType").value = reminderConfig.reminderType;
+        document.getElementById("ccReminderEventName").textContent = selectedEvent.eventName;
+        document.getElementById("ccReminderEventDate").textContent = "📅 " + selectedEvent.eventDate;
+
+        updateReminderStageNotice();
         await loadReminderConfiguration();
-
         await loadParticipants();
     }
 
-
     function determineDefaultReminderStage() {
-
-        const days =
-            getDaysRemaining();
-
-
-        if (days <= 1) {
-            return "T-1";
-        }
-
-
-        if (days <= 3) {
-            return "T-3";
-        }
-
-
+        const days = getDaysRemaining();
+        if (days === null) return "T-7";
+        if (days <= 1) return "T-1";
+        if (days <= 3) return "T-3";
         return "T-7";
     }
 
-
     async function loadReminderConfiguration() {
-
-        const response =
-            await API.post(
-                "getReminderConfiguration",
-                {
-                    data:
-                        JSON.stringify({
-                            spreadsheetId:
-                                selectedEvent
-                                    .spreadsheetId
-                        })
-                }
-            );
-
-
-        if (
-            response &&
-            response.success &&
-            response.data
-        ) {
-
-            reminderConfig = {
-
-                ...reminderConfig,
-
-                ...response.data
-            };
-        }
-
-
-        updateReminderStageNotice();
-    }
-
-
-    function changeReminderType(
-        type
-    ) {
-
-        reminderConfig.reminderType =
-            type;
-
-
-        updateReminderStageNotice();
-
-        renderParticipants();
-    }
-
-
-    function updateReminderStageNotice() {
-
-        const notice =
-            document.getElementById(
-                "ccReminderStageNotice"
-            );
-
-
-        if (!notice) {
-            return;
-        }
-
-
-        notice.textContent =
-            `Current reminder stage: ${
-                reminderConfig.reminderType ||
-                determineDefaultReminderStage()
-            }`;
-    }
-
-
-    async function saveReminderConfig() {
-
-        const response =
-            await API.post(
-                "saveReminderConfiguration",
-                reminderConfig
-            );
-
-
-        if (
-            !response ||
-            !response.success
-        ) {
-
-            throw new Error(
-                response?.message ||
-                "Unable to save reminder configuration."
-            );
-        }
-
-
-        alert(
-            "Reminder configuration saved."
-        );
-    }
-
-
-    async function loadParticipants() {
-
-        const response =
-            await API.post(
-                "getReminderParticipants",
-                {
-
-                    spreadsheetId:
-                        selectedEvent
-                            .spreadsheetId,
-
-                    reminderType:
-                        reminderConfig
-                            .reminderType
-                }
-            );
-
-
-        if (
-            !response ||
-            !response.success
-        ) {
-
-            throw new Error(
-                response?.message ||
-                "Unable to load reminder participants."
-            );
-        }
-
-
-        participants =
-            deduplicatePeople(
-                response.data || []
-            );
-
-
-        sortByName(
-            participants
-        );
-
-
-        renderParticipants();
-    }
-
-
-    function renderParticipants() {
-
-        const container =
-            document.getElementById(
-                "ccReminderParticipants"
-            );
-
-
-        if (!container) {
-            return;
-        }
-
-
-        container.innerHTML =
-            participants
-                .map(
-                    (
-                        person,
-                        index
-                    ) => {
-
-                        const status =
-                            String(
-                                person.reminderStatus ||
-                                "PENDING"
-                            ).toUpperCase();
-
-
-                        const isSent =
-                            status ===
-                            "SENT";
-
-
-                        return `
-
-                            <div class="participant-row">
-
-                                <input
-                                    type="checkbox"
-                                    class="cc-reminder-check"
-                                    data-index="${index}"
-                                    ${
-                                        isSent
-                                            ? "disabled"
-                                            : ""
-                                    }
-                                >
-
-                                <div class="participant-name">
-                                    ${escapeHtml(
-                                        getPersonName(
-                                            person
-                                        )
-                                    )}
-                                </div>
-
-                                <div class="participant-mobile">
-                                    ${escapeHtml(
-                                        getPersonMobile(
-                                            person
-                                        )
-                                    )}
-                                </div>
-
-                                <div class="participant-status ${
-                                    isSent
-                                        ? "sent"
-                                        : "pending"
-                                }">
-                                    ${
-                                        isSent
-                                            ? "SENT"
-                                            : "PENDING"
-                                    }
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onclick="window.CommunicationsCentre.previewReminder(${index})"
-                                >
-                                    Preview
-                                </button>
-
-                                ${
-                                    !isSent
-                                        ? `
-                                            <button
-                                                type="button"
-                                                onclick="window.CommunicationsCentre.openManualReminderWhatsApp(${index})"
-                                            >
-                                                WhatsApp
-                                            </button>
-                                          `
-                                        : ""
-                                }
-
-                            </div>
-                        `;
-                    }
-                )
-                .join("");
-    }
-
-
-    function generateReminderMessage(
-        person
-    ) {
-
-        const name =
-            getPersonName(
-                person
-            );
-
-
-        const stage =
-            reminderConfig.reminderType ||
-            determineDefaultReminderStage();
-
-
-        if (
-            stage ===
-            "T-7"
-        ) {
-
-            return `Hi ${name}, just a reminder about the upcoming event. We look forward to seeing you!`;
-        }
-
-
-        if (
-            stage ===
-            "T-3"
-        ) {
-
-            return `Hi ${name}, our event is coming up soon. We hope you are able to join us!`;
-        }
-
-
-        return `Hi ${name}, this is a final reminder for the upcoming event. See you soon!`;
-    }
-
-
-    function previewReminder(
-        index
-    ) {
-
-        const person =
-            participants[index];
-
-
-        if (!person) {
-            return;
-        }
-
-
-        alert(
-            generateReminderMessage(
-                person
-            )
-        );
-    }
-
-
-    function previewReminderForFirstPerson() {
-
-        if (!participants.length) {
-
-            alert(
-                "No participants available."
-            );
-
-            return;
-        }
-
-
-        previewReminder(0);
-    }
-
-
-    async function prepareReminderWhatsApp(
-        person,
-        message
-    ) {
-
-        return await API.post(
-            "prepareReminderWhatsApp",
-            {
-
-                spreadsheetId:
-                    selectedEvent
-                        ?.spreadsheetId,
-
-                eventName:
-                    getEventName(
-                        selectedEvent
-                    ),
-
-                personId:
-                    getPersonId(
-                        person
-                    ),
-
-                name:
-                    getPersonName(
-                        person
-                    ),
-
-                mobile:
-                    getPersonMobile(
-                        person
-                    ),
-
-                reminderType:
-                    reminderConfig
-                        .reminderType,
-
-                message
+        if (!selectedEvent) return;
+        try {
+            const response = await API.post("getReminderConfiguration", {
+                data: JSON.stringify({ spreadsheetId: selectedEvent.spreadsheetId, reminderType: reminderConfig.reminderType })
+            });
+            if (!response || !response.success) throw new Error(response?.message || "Unable to load reminder configuration");
+
+            const saved = response.data;
+            if (saved) {
+                document.getElementById("ccReportingTime").value = saved.reportingTime || "";
+                document.getElementById("ccEventTime").value = saved.eventTime || "";
+                document.getElementById("ccVenue").value = saved.venue || "";
+                document.getElementById("ccLocation").value = saved.location || "";
+                document.getElementById("ccImportantInfo").value = saved.importantInfo || "";
+                document.getElementById("ccCustomMessage").value = saved.customMessage || "";
             }
-        );
+        } catch (error) {
+            console.warn("loadReminderConfiguration:", error);
+        }
+        updateReminderStageNotice();
     }
 
-
-    async function openManualReminderWhatsApp(
-        index
-    ) {
-
-        const person =
-            participants[index];
-
-
-        if (!person) {
-            return;
-        }
-
-
-        const status =
-            String(
-                person.reminderStatus ||
-                ""
-            ).toUpperCase();
-
-
-        if (
-            status ===
-            "SENT"
-        ) {
-
-            alert(
-                "This reminder has already been sent."
-            );
-
-            return;
-        }
-
-
-        const mobile =
-            getPersonMobile(
-                person
-            );
-
-
-        if (!mobile) {
-
-            alert(
-                "This person does not have a mobile number."
-            );
-
-            return;
-        }
-
-
-        const message =
-            generateReminderMessage(
-                person
-            );
-
-
-        const phone =
-            normalisePhone(
-                mobile
-            );
-
-
-        window.open(
-            `https://wa.me/${phone}?text=${encodeURIComponent(
-                message
-            )}`,
-            "_blank"
-        );
-
-
-        const sent =
-            confirm(
-                "Did you send the reminder?"
-            );
-
-
-        if (!sent) {
-            return;
-        }
-
-
-        await markCommunicationSent(
-            person,
-            "REMINDER",
-            reminderConfig.reminderType,
-            message
-        );
-    }
-
-
-    async function sendSelectedReminder() {
-
-        const selected =
-            Array.from(
-                document.querySelectorAll(
-                    ".cc-reminder-check:checked"
-                )
-            );
-
-
-        if (!selected.length) {
-
-            alert(
-                "Please select at least one person."
-            );
-
-            return;
-        }
-
-
-        if (
-            !confirm(
-                `Send reminder to ${selected.length} selected person(s)?`
-            )
-        ) {
-
-            return;
-        }
-
-
-        for (
-            const checkbox of selected
-        ) {
-
-            const index =
-                Number(
-                    checkbox.dataset.index
-                );
-
-
-            await openManualReminderWhatsApp(
-                index
-            );
-        }
-
-
+    async function changeReminderType() {
+        if (!selectedEvent) return;
+        reminderConfig.reminderType = document.getElementById("ccReminderType").value;
+        await loadReminderConfiguration();
         await loadParticipants();
     }
 
-
-    /* =========================================================
-       MARK COMMUNICATION SENT
-    ========================================================= */
-
-    async function markCommunicationSent(
-        person,
-        type,
-        stage,
-        message
-    ) {
-
-        if (!selectedEvent) {
-            return;
-        }
-
-
-        const payload = {
-
-            spreadsheetId:
-                selectedEvent
-                    .spreadsheetId,
-
-            eventId:
-                selectedEvent.eventId ||
-                selectedEvent.id ||
-                "",
-
-            eventName:
-                getEventName(
-                    selectedEvent
-                ),
-
-            personId:
-                getPersonId(
-                    person
-                ),
-
-            name:
-                getPersonName(
-                    person
-                ),
-
-            mobile:
-                getPersonMobile(
-                    person
-                ),
-
-            type,
-
-            stage,
-
-            message
+    function updateReminderStageNotice() {
+        const stage = reminderConfig.reminderType;
+        const days = getDaysRemaining();
+        const labels = {
+            "T-7": "T-7 reminder — intended for about one week before the event.",
+            "T-3": "T-3 reminder — intended for about three days before the event.",
+            "T-1": "T-1 reminder — intended for the day before the event."
         };
+        let text = labels[stage] || "";
+        if (days !== null) text += ` Current event timing: ${days} day(s) remaining.`;
+        const notice = document.getElementById("ccReminderStageNotice");
+        if (notice) notice.textContent = text;
+    }
 
+    async function saveReminderConfig() {
+        if (!selectedEvent) return;
+
+        reminderConfig.reportingTime = document.getElementById("ccReportingTime").value;
+        reminderConfig.eventTime = document.getElementById("ccEventTime").value;
+        reminderConfig.venue = document.getElementById("ccVenue").value;
+        reminderConfig.location = document.getElementById("ccLocation").value;
+        reminderConfig.importantInfo = document.getElementById("ccImportantInfo").value;
+        reminderConfig.customMessage = document.getElementById("ccCustomMessage").value;
 
         try {
-
-            const response =
-                await API.post(
-                    "markCommunicationSent",
-                    payload
-                );
-
-
-            if (
-                !response ||
-                !response.success
-            ) {
-
-                throw new Error(
-                    response?.message ||
-                    "Unable to mark communication as sent."
-                );
-            }
-
-
-            if (
-                type ===
-                "PUBLICITY"
-            ) {
-
-                person.publicityStatus =
-                    "SENT";
-
-
-                renderPublicityAudience();
-
-            } else if (
-                type ===
-                "REMINDER"
-            ) {
-
-                person.reminderStatus =
-                    "SENT";
-
-
-                renderParticipants();
-            }
-
-
+            const response = await API.post("saveReminderConfiguration", reminderConfig);
+            if (!response || !response.success) throw new Error(response?.message || "Unable to save reminder configuration");
+            alert("Reminder configuration saved.");
+            await loadParticipants();
         } catch (error) {
-
-            console.error(
-                "markCommunicationSent:",
-                error
-            );
-
-
-            alert(
-                error.message ||
-                "Unable to update communication status."
-            );
+            console.error(error);
+            alert("Unable to save reminder configuration.\n\n" + error.message);
         }
     }
 
+    async function loadParticipants() {
+        if (!selectedEvent) return;
+        try {
+            const response = await API.post("getReminderParticipants", {
+                spreadsheetId: selectedEvent.spreadsheetId,
+                reminderType: reminderConfig.reminderType
+            });
+            if (!response || !response.success) throw new Error(response?.message || "Unable to load participants");
 
-    /* =========================================================
-       TOGGLE ALL
-    ========================================================= */
-
-    function toggleAllPublicity(
-        checked
-    ) {
-
-        document
-            .querySelectorAll(
-                ".cc-publicity-check:not(:disabled)"
-            )
-            .forEach(
-                checkbox => {
-
-                    checkbox.checked =
-                        checked;
-                }
-            );
+            participants = deduplicatePeople(response.data || []);
+            sortByName(participants);
+            renderParticipants();
+        } catch (error) {
+            console.error(error);
+            const table = document.getElementById("ccParticipantTable");
+            if (table) table.innerHTML = `<tr><td colspan="5">Unable to load participants.</td></tr>`;
+        }
     }
 
+    function renderParticipants() {
+        const table = document.getElementById("ccParticipantTable");
+        if (!table) return;
 
-    function toggleAllReminder(
-        checked
-    ) {
+        let sent = 0, pending = 0, failed = 0;
+        participants.forEach(p => {
+            const status = String(p.reminderStatus || p.ReminderStatus || "PENDING").toUpperCase();
+            if (status === "SENT") sent++; else if (status === "FAILED") failed++; else pending++;
+        });
 
-        document
-            .querySelectorAll(
-                ".cc-reminder-check:not(:disabled)"
-            )
-            .forEach(
-                checkbox => {
+        document.getElementById("ccReminderTotal").textContent = participants.length;
+        document.getElementById("ccReminderSent").textContent = sent;
+        document.getElementById("ccReminderPending").textContent = pending;
+        document.getElementById("ccReminderFailed").textContent = failed;
 
-                    checkbox.checked =
-                        checked;
-                }
-            );
-    }
-
-
-    /* =========================================================
-       FILE ATTACHMENT
-    ========================================================= */
-
-    function initialiseAttachmentListener() {
-
-        const attachment =
-            document.getElementById(
-                "ccpublicityAttachment"
-            );
-
-
-        if (!attachment) {
+        if (participants.length === 0) {
+            table.innerHTML = `<tr><td colspan="5">No participants requiring this reminder.</td></tr>`;
             return;
         }
 
+        table.innerHTML = participants.map((p, index) => {
+            const status = String(p.reminderStatus || p.ReminderStatus || "PENDING").toUpperCase();
+            const statusClass = status === "SENT" ? "badge-green" : status === "FAILED" ? "badge-red" : "badge-yellow";
 
-        attachment.addEventListener(
-            "change",
-            function () {
-
-                const file =
-                    this.files?.[0];
-
-
-                const name =
-                    document.getElementById(
-                        "ccPublicityAttachmentName"
-                    );
-
-
-                if (name) {
-
-                    name.textContent =
-                        file
-                            ? file.name
-                            : "";
-                }
-
-
-                publicityConfig.attachmentName =
-                    file
-                        ? file.name
-                        : "";
-            }
-        );
+            return `
+                <tr>
+                    <td><input type="checkbox" class="cc-reminder-check" value="${index}" ${status === "SENT" ? "disabled" : ""}></td>
+                    <td>${escapeHtml(getPersonName(p))}</td>
+                    <td>${escapeHtml(getPersonMobile(p))}</td>
+                    <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                    <td>
+                        <button type="button" onclick="CommunicationsCentre.previewReminder(${index})">Preview</button>
+                        ${status !== "SENT" ? `<button type="button" onclick="CommunicationsCentre.openManualReminderWhatsApp(${index})">WhatsApp</button>` : ""}
+                    </td>
+                </tr>
+            `;
+        }).join("");
     }
 
+    function generateReminderMessage(person) {
+        const name = getPersonName(person);
+        let intro = "";
 
-    /* =========================================================
-       HELPERS
-    ========================================================= */
-
-    function personaliseMessage(
-        message,
-        person
-    ) {
-
-        if (!message) {
-            return "";
+        switch (reminderConfig.reminderType) {
+            case "T-7":
+                intro = `Hi ${name}! 👋\n\nThank you for registering for *${reminderConfig.eventName}*. We're delighted you'll be joining us!`;
+                break;
+            case "T-3":
+                intro = `Hi ${name}! 😊\n\nOnly *3 days to go* until *${reminderConfig.eventName}*!`;
+                break;
+            case "T-1":
+                intro = `Hi ${name}! 👋\n\nJust a reminder that *${reminderConfig.eventName}* is happening *tomorrow*!`;
+                break;
         }
 
+        let message = `${intro}\n\n📅 *Date*: ${reminderConfig.eventDate}\n🕒 *Reporting Time*: ${reminderConfig.reportingTime || ""}\n⏰ *Programme Starts*: ${reminderConfig.eventTime || ""}\n📍 *Venue*: ${reminderConfig.venue || ""}\n📌 *Location*: ${reminderConfig.location || ""}\n\n`;
 
-        const name =
-            getPersonName(
-                person
-            );
+        if (reminderConfig.importantInfo) message += `ℹ️ *Important Information*\n${reminderConfig.importantInfo}\n\n`;
+        if (reminderConfig.customMessage) message += `💬 *A Message From Us*\n${reminderConfig.customMessage}\n\n`;
 
-
-        return String(
-            message
-        ).replace(
-            /\{name\}/gi,
-            name
-        );
+        message += `If you have any questions, feel free to let us know.\n\nBlessings,\n*Missions Team*`;
+        return message;
     }
 
-
-    function getPersonName(
-        person
-    ) {
-
-        return (
-            person?.name ||
-            person?.Name ||
-            person?.fullName ||
-            person?.FullName ||
-            ""
-        );
+    function previewReminder(index) {
+        const person = participants[index];
+        if (!person) return;
+        alert(generateReminderMessage(person));
     }
 
-
-    function getPersonMobile(
-        person
-    ) {
-
-        return (
-            person?.mobile ||
-            person?.Mobile ||
-            person?.phone ||
-            person?.Phone ||
-            ""
-        );
+    function previewReminderForFirstPerson() {
+        if (participants.length === 0) { alert("No participants available for preview."); return; }
+        previewReminder(0);
     }
 
-
-    function getPersonId(
-        person
-    ) {
-
-        return (
-            person?.personId ||
-            person?.id ||
-            person?.ID ||
-            person?.mobile ||
-            person?.Mobile ||
-            ""
-        );
+    async function prepareReminderWhatsApp(person, message) {
+        try {
+            const response = await API.post("prepareReminderWhatsApp", {
+                personId: getPersonId(person),
+                eventId: selectedEvent.spreadsheetId,
+                eventName: selectedEvent.eventName,
+                mobile: getPersonMobile(person),
+                name: getPersonName(person),
+                reminderType: reminderConfig.reminderType,
+                message
+            });
+            if (!response.success) throw new Error(response.message || "Unable to prepare reminder");
+            return response;
+        } catch (error) {
+            console.warn("prepareReminderWhatsApp:", error);
+            return null;
+        }
     }
 
+    async function openManualReminderWhatsApp(index) {
+        const person = participants[index];
+        if (!person) return;
 
-    function normalisePhone(
-        mobile
-    ) {
+        const status = String(person.reminderStatus || person.ReminderStatus || "").toUpperCase();
+        if (status === "SENT") { alert(`${getPersonName(person)} has already received this reminder.`); return; }
 
-        return String(
-            mobile || ""
-        ).replace(
-            /\D/g,
-            ""
-        );
+        const phone = normalisePhone(getPersonMobile(person));
+        if (!phone) { alert(`${getPersonName(person)} does not have a valid mobile number.`); return; }
+
+        const message = generateReminderMessage(person);
+        await prepareReminderWhatsApp(person, message);
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+
+        const sent = confirm(`WhatsApp has been opened for ${getPersonName(person)}.\n\nDid you send the reminder?`);
+        if (!sent) return;
+
+        await markCommunicationSent(person, "REMINDER", reminderConfig.reminderType, message);
     }
 
+    async function sendSelectedReminder() {
+        const selected = document.querySelectorAll(".cc-reminder-check:checked");
+        if (selected.length === 0) { alert("Please select people first."); return; }
+        if (!confirm(`Open WhatsApp for ${selected.length} selected people?`)) return;
 
-    function deduplicatePeople(
-        people
-    ) {
+        for (const checkbox of selected) {
+            await openManualReminderWhatsApp(Number(checkbox.value));
+        }
+        await loadParticipants();
+    }
 
-        const map =
-            new Map();
+    /* ================= MARK SENT ================= */
+    async function markCommunicationSent(person, type, stage, message) {
+        try {
+            const response = await API.post("markCommunicationSent", {
+                personId: getPersonId(person),
+                eventId: selectedEvent.spreadsheetId,
+                eventName: selectedEvent.eventName,
+                name: getPersonName(person),
+                mobile: getPersonMobile(person),
+                type,
+                stage: stage || "",
+                message: message || ""
+            });
+            if (!response.success) throw new Error(response.message || "Unable to mark communication as sent");
 
-
-        people.forEach(
-            person => {
-
-                const key =
-                    getPersonId(
-                        person
-                    ) ||
-                    getPersonMobile(
-                        person
-                    ) ||
-                    getPersonName(
-                        person
-                    );
-
-
-                if (!map.has(key)) {
-
-                    map.set(
-                        key,
-                        person
-                    );
-                }
+            if (type === "PUBLICITY") {
+                person.publicityStatus = "SENT";
+                person.PublicityStatus = "SENT";
+                renderPublicityAudience();
             }
-        );
-
-
-        return Array.from(
-            map.values()
-        );
+            if (type === "REMINDER") {
+                person.reminderStatus = "SENT";
+                person.ReminderStatus = "SENT";
+                renderParticipants();
+            }
+            return true;
+        } catch (error) {
+            console.error("markCommunicationSent:", error);
+            alert("The message was sent/opened, but the record could not be saved.\n\n" + error.message);
+            return false;
+        }
     }
 
-
-    function sortByName(
-        people
-    ) {
-
-        people.sort(
-            (
-                a,
-                b
-            ) =>
-                getPersonName(a)
-                    .localeCompare(
-                        getPersonName(b)
-                    )
-        );
+    /* ================= TOGGLE ALL ================= */
+    function toggleAllPublicity(checkbox) {
+        document.querySelectorAll(".cc-publicity-check:not(:disabled)").forEach(cb => cb.checked = checkbox.checked);
     }
 
-
-    function getEventName(
-        event
-    ) {
-
-        return (
-            event?.eventName ||
-            event?.event_name ||
-            event?.name ||
-            event?.Name ||
-            ""
-        );
+    function toggleAllReminder(checkbox) {
+        document.querySelectorAll(".cc-reminder-check:not(:disabled)").forEach(cb => cb.checked = checkbox.checked);
     }
 
+    /* ================= ATTACHMENT ================= */
+    function initialiseAttachmentListener() {
+        const attachment = document.getElementById("ccpublicityAttachment");
+        if (!attachment) return;
 
-    function getEventDate(
-        event
-    ) {
+        attachment.addEventListener("change", function () {
+            const file = this.files?.[0];
+            const name = document.getElementById("ccAttachmentName");
+            const posterPreview = document.getElementById("ccPosterPreview");
+            const pdfPreview = document.getElementById("ccPdfPreview");
 
-        return (
-            event?.eventDate ||
-            event?.event_date ||
-            event?.date ||
-            event?.Date ||
-            ""
-        );
+            posterPreview.classList.add("hidden");
+            pdfPreview.classList.add("hidden");
+            posterPreview.innerHTML = "";
+            pdfPreview.innerHTML = "";
+
+            if (!file) { name.textContent = ""; return; }
+
+            name.textContent = `Selected: ${file.name}`;
+            publicityConfig.attachmentName = file.name;
+
+            if (file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    posterPreview.innerHTML = `<img src="${e.target.result}">`;
+                    posterPreview.classList.remove("hidden");
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type === "application/pdf") {
+                pdfPreview.innerHTML = "📄 PDF selected";
+                pdfPreview.classList.remove("hidden");
+            }
+        });
     }
 
-
-    function escapeHtml(
-        value
-    ) {
-
-        return String(
-            value ?? ""
-        )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+    /* ================= HELPERS ================= */
+    function personaliseMessage(message, person) {
+        return String(message || "").replace(/\{name\}/gi, getPersonName(person));
     }
 
+    function getPersonName(person) {
+        return String(person?.name || person?.Name || person?.fullName || person?.FullName || "").trim();
+    }
 
-    /* =========================================================
-       INITIALISE ATTACHMENT
-    ========================================================= */
+    function getPersonMobile(person) {
+        return String(person?.mobile || person?.Mobile || person?.phone || person?.Phone || "").trim();
+    }
 
-    initialiseAttachmentListener();
+    function getPersonId(person) {
+        return String(person?.personId || person?.PersonID || person?.id || getPersonMobile(person) || getPersonName(person) || "").trim();
+    }
 
+    function normalisePhone(phone) {
+        return String(phone || "").replace(/\D/g, "");
+    }
 
-    /* =========================================================
-       PUBLIC API
-    ========================================================= */
+    function deduplicatePeople(people) {
+        const unique = new Map();
+        people.forEach(person => {
+            const key = String(getPersonId(person)).trim().toLowerCase();
+            if (key && !unique.has(key)) unique.set(key, person);
+        });
+        return Array.from(unique.values());
+    }
 
+    function sortByName(people) {
+        people.sort((a, b) => getPersonName(a).localeCompare(getPersonName(b), undefined, { sensitivity: "base" }));
+    }
+
+    function getEventName(event) {
+        return event?.eventName || event?.EventName || event?.name || "";
+    }
+
+    function getEventDate(event) {
+        return event?.eventDate || event?.EventDate || event?.date || "";
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    /* ================= PUBLIC API ================= */
     return {
-
-        cinit,
-
-        loadEvents,
-        selectEvent,
-        selectActivity,
-
-        previewPublicityCampaign,
-        previewPublicityPerson,
-        openManualPublicityWhatsApp,
-        savePublicityConfiguration,
-        refreshPublicityAudience,
-        sendSelectedPublicity,
-
-        previewReminder,
-        previewReminderForFirstPerson,
-        openManualReminderWhatsApp,
-        saveReminderConfig,
-        changeReminderType,
-        sendSelectedReminder,
-
-        toggleAllPublicity,
-        toggleAllReminder
-
+        cinit, loadEvents, selectEvent, selectActivity,
+        previewPublicityCampaign, previewPublicityPerson, openManualPublicityWhatsApp,
+        savePublicityConfiguration, refreshPublicityAudience, sendSelectedPublicity,
+        previewReminder, previewReminderForFirstPerson, openManualReminderWhatsApp,
+        saveReminderConfig, changeReminderType, loadParticipants, sendSelectedReminder,
+        toggleAllPublicity, toggleAllReminder
     };
 
 })();
-
 
 </script>
 
