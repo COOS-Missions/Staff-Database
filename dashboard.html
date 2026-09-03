@@ -6226,14 +6226,41 @@ window.CommunicationsCentre = (() => {
     async function loadPublicityAudience() {
         if (!selectedEvent) return;
 
-        try {
-            const response = await API.post("getPublicityAudience", { spreadsheetId: selectedEvent.spreadsheetId });
-            if (!response || !response.success) throw new Error(response?.message || "Unable to load publicity audience.");
+        try{
 
-            publicityAudience = deduplicatePeople(response.data || []);
-            sortByName(publicityAudience);
-            renderPublicityAudience();
-        } catch (error) {
+        const response =
+            await API.post(
+                "getPublicityAudience",
+                {
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId
+                }
+            );
+
+
+        if(!response.success){
+
+            throw new Error(
+                response.message ||
+                "Unable to load publicity audience"
+            );
+
+        }
+
+
+        publicityAudience =
+            response.data || [];
+
+
+        publicityAudience =
+            deduplicatePeople(
+                publicityAudience
+            );
+
+
+        renderPublicityAudience();
+
+    } catch (error) {
             console.error(error);
             const table = document.getElementById("ccPublicityTable");
             if (table) table.innerHTML = `<tr><td colspan="6">Unable to load publicity audience.</td></tr>`;
