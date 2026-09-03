@@ -6003,6 +6003,58 @@ let publicityConfig = {};
 
   }
 
+   function bindEvents() {
+
+    const searchBox =
+      document.getElementById(
+        "em_searchBox"
+      );
+
+
+    const statusFilter =
+      document.getElementById(
+        "em_statusFilter"
+      );
+
+
+    const participantSearch =
+      document.getElementById(
+        "em_participantSearch"
+      );
+
+
+    if (searchBox) {
+
+      searchBox.addEventListener(
+        "keyup",
+        filterEvents
+      );
+
+    }
+
+
+    if (statusFilter) {
+
+      statusFilter.addEventListener(
+        "change",
+        filterEvents
+      );
+
+    }
+
+
+    if (participantSearch) {
+
+      participantSearch.addEventListener(
+        "keyup",
+        filterParticipants
+      );
+
+    }
+
+  }
+
+
 
 /* =========================================================
    URL PARAMETERS
