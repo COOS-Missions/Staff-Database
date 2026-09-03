@@ -5957,1035 +5957,733 @@ async function deleteEvent(id) {
 window.CommunicationsCentre = (() => {
 
     /* =========================================================
-   GLOBAL STATE
-========================================================= */
+       GLOBAL STATE
+    ========================================================= */
 
-let events = [];
+    let events = [];
+    let selectedEvent = null;
 
-let selectedEvent = null;
+    let currentActivity = "";
 
-let currentActivity = "";
+    let participants = [];
+    let publicityAudience = [];
 
-let participants = [];
-
-let publicityAudience = [];
-
-let reminderConfig = {};
-
-let publicityConfig = {};
-
-  let initialised = false;
-
-  async function cinit() {
-
-    /*
-     * The dashboard can call showSection('events')
-     * multiple times.
-     *
-     * Do not create duplicate listeners.
-     */
-
-    if (!initialised) {
-
-      bindEvents();
-
-      initialised = true;
-
-    }
+    let reminderConfig = {};
+    let publicityConfig = {};
 
 
-    /*
-     * Refresh the event data every time the user
-     * opens Event Management.
-     */
+    /* =========================================================
+       INITIALISATION
+    ========================================================= */
 
-    await loadEvents();
+    let initialised = false;
 
-  }
-
-   function bindEvents() {
-
-    const searchBox =
-      document.getElementById(
-        "em_searchBox"
-      );
-
-
-    const statusFilter =
-      document.getElementById(
-        "em_statusFilter"
-      );
-
-
-    const participantSearch =
-      document.getElementById(
-        "em_participantSearch"
-      );
-
-
-    if (searchBox) {
-
-      searchBox.addEventListener(
-        "keyup",
-        filterEvents
-      );
-
-    }
-
-
-    if (statusFilter) {
-
-      statusFilter.addEventListener(
-        "change",
-        filterEvents
-      );
-
-    }
-
-
-    if (participantSearch) {
-
-      participantSearch.addEventListener(
-        "keyup",
-        filterParticipants
-      );
-
-    }
-
-  }
-
-
-
-/* =========================================================
-   URL PARAMETERS
-========================================================= */
-
-const params =
-    new URLSearchParams(
-        window.location.search
-    );
-
-const presetEvent =
-    params.get("event");
-
-
-/* =========================================================
-   LOAD EVENTS
-========================================================= */
-
-async function loadEvents(){
-
-    try{
-
-        const response =
-            await API.post(
-                "getEventList",
-                {}
-            );
-
-        if(!response.success){
-
-            throw new Error(
-                response.message ||
-                "Unable to load events"
-            );
-
-        }
-
-        events =
-            response.data ||
-            response.result ||
-            [];
+    async function cinit() {
 
         /*
-            Communications Centre only works
-            with ACTIVE events.
-        */
+         * Communications Centre does not bind the main
+         * Event Management UI.
+         *
+         * Event Management is responsible for its own
+         * event listeners.
+         */
 
-        events =
-            events.filter(
-                e =>
-                    String(
-                        e.status ||
-                        e.Status ||
-                        ""
-                    )
-                    .toUpperCase()
-                    ===
-                    "ACTIVE"
-            );
-
-        populateEventDropdown();
-
-        if(events.length === 0){
-
-            document.getElementById(
-                "selectedEventInfo"
-            ).innerHTML =
-            `
-                <div class="empty">
-
-                    No active events are currently
-                    available for communication.
-
-                </div>
-            `;
-
+        if (initialised) {
+            /*
+             * Still reload the event data whenever the
+             * Communications Centre is opened.
+             */
+            await loadEvents();
+            return;
         }
 
+        initialised = true;
+
+        /*
+         * Load the current event list.
+         */
+        await loadEvents();
     }
-    catch(err){
 
-        console.error(
-            "loadEvents error:",
-            err
-        );
 
-        document.getElementById(
-            "selectedEventInfo"
-        ).innerHTML =
-        `
-            <div class="notice">
+    /* =========================================================
+       LOAD EVENTS
+    ========================================================= */
 
-                Unable to load active events.
+    async function loadEvents() {
 
-                <br><br>
+        try {
 
-                ${escapeHtml(
-                    err.message || ""
-                )}
+            const response =
+                await API.post(
+                    "getEventList",
+                    {}
+                );
 
-            </div>
+            if (
+                !response ||
+                !response.success
+            ) {
+
+                throw new Error(
+                    response?.message ||
+                    "Unable to load events."
+                );
+            }
+
+
+            /*
+             * Only ACTIVE events should appear.
+             */
+            events =
+                Array.isArray(response.data)
+                    ? response.data.filter(
+                        event =>
+                            String(
+                                event.status || ""
+                            ).toUpperCase() === "ACTIVE"
+                    )
+                    : [];
+
+
+            populateEventDropdown();
+
+        } catch (error) {
+
+            console.error(
+                "Communications Centre - loadEvents:",
+                error
+            );
+
+            const info =
+                document.getElementById(
+                    "selectedEventInfo"
+                );
+
+            if (info) {
+
+                info.innerHTML =
+                    `<div class="error-message">
+                        ${escapeHtml(
+                            error.message ||
+                            "Unable to load events."
+                        )}
+                    </div>`;
+            }
+        }
+    }
+
+
+    /* =========================================================
+       EVENT DROPDOWN
+    ========================================================= */
+
+    function populateEventDropdown() {
+
+        const select =
+            document.getElementById(
+                "eventFilter"
+            );
+
+        if (!select) {
+            return;
+        }
+
+
+        select.innerHTML = `
+            <option value="">
+                Select Event
+            </option>
         `;
 
-    }
 
-}
+        events.forEach(event => {
 
-
-/* =========================================================
-   POPULATE EVENT DROPDOWN
-========================================================= */
-
-function populateEventDropdown(){
-
-    const select =
-        document.getElementById(
-            "eventFilter"
-        );
-
-    select.innerHTML =
-    `
-        <option value="">
-            Select Event
-        </option>
-    `;
-
-    events.forEach(
-        e => {
-
-            const id =
-                e.spreadsheetId ||
-                e.SpreadsheetId ||
-                e.id ||
-                e.eventId;
-
-            const name =
-                e.eventName ||
-                e.EventName ||
-                e.name ||
+            const spreadsheetId =
+                event.spreadsheetId ||
+                event.id ||
+                event.eventId ||
                 "";
 
-            const date =
-                e.eventDate ||
-                e.EventDate ||
-                e.date ||
-                "";
+            const eventName =
+                getEventName(event);
+
+            const eventDate =
+                getEventDate(event);
+
 
             const option =
                 document.createElement(
                     "option"
                 );
 
-            option.value = id;
+            option.value =
+                spreadsheetId;
 
             option.textContent =
-                `${name} - ${date}`;
+                eventDate
+                    ? `${eventName} — ${eventDate}`
+                    : eventName;
 
             select.appendChild(
                 option
             );
+        });
 
+
+        /*
+         * Preserve URL preset if supplied.
+         */
+        if (presetEvent) {
+
+            const matchingEvent =
+                events.find(event => {
+
+                    const id =
+                        event.spreadsheetId ||
+                        event.id ||
+                        event.eventId ||
+                        "";
+
+                    return String(id) ===
+                           String(presetEvent);
+                });
+
+
+            if (matchingEvent) {
+
+                select.value =
+                    matchingEvent.spreadsheetId ||
+                    matchingEvent.id ||
+                    matchingEvent.eventId ||
+                    "";
+
+                selectEvent();
+            }
         }
-    );
-
-    if(presetEvent){
-
-        select.value =
-            presetEvent;
-
-        selectEvent();
-
-    }
-
-}
-
-
-/* =========================================================
-   SELECT EVENT
-========================================================= */
-
-async function selectEvent(){
-
-    const eventId =
-        document.getElementById(
-            "eventFilter"
-        ).value;
-
-    if(!eventId){
-
-        selectedEvent = null;
-
-        currentActivity = "";
-
-        hideAllModules();
-
-        return;
-
-    }
-
-    selectedEvent =
-        events.find(
-            e =>
-                String(
-                    e.spreadsheetId ||
-                    e.SpreadsheetId ||
-                    e.id ||
-                    e.eventId
-                )
-                ===
-                String(eventId)
-        );
-
-    if(!selectedEvent)
-        return;
-
-
-    /*
-        NORMALISE EVENT
-    */
-
-    selectedEvent.spreadsheetId =
-        selectedEvent.spreadsheetId ||
-        selectedEvent.SpreadsheetId ||
-        selectedEvent.id ||
-        selectedEvent.eventId;
-
-    selectedEvent.eventName =
-        selectedEvent.eventName ||
-        selectedEvent.EventName ||
-        selectedEvent.name ||
-        "";
-
-    selectedEvent.eventDate =
-        selectedEvent.eventDate ||
-        selectedEvent.EventDate ||
-        selectedEvent.date ||
-        "";
-
-    selectedEvent.status =
-        selectedEvent.status ||
-        selectedEvent.Status ||
-        "ACTIVE";
-
-
-    /*
-        DISPLAY EVENT
-    */
-
-    document.getElementById(
-        "selectedEventInfo"
-    ).classList.remove("hidden");
-
-    document.getElementById(
-        "selectedEventInfo"
-    ).innerHTML =
-    `
-        <div class="event-info">
-
-            <div class="event-title">
-
-                ${escapeHtml(
-                    selectedEvent.eventName
-                )}
-
-            </div>
-
-            <br>
-
-            📅
-            ${escapeHtml(
-                selectedEvent.eventDate
-            )}
-
-            <br>
-
-            📌 Status:
-
-            <span class="badge badge-green">
-                ACTIVE
-            </span>
-
-        </div>
-    `;
-
-
-    document.getElementById(
-        "activityCard"
-    ).classList.remove("hidden");
-
-    document.getElementById(
-        "lifecycleCard"
-    ).classList.remove("hidden");
-
-
-    currentActivity = "";
-
-
-    document
-        .querySelectorAll(
-            ".activity-button"
-        )
-        .forEach(
-            btn =>
-                btn.classList.remove("active")
-        );
-
-
-    hideModules();
-
-    updateLifecycleStatus();
-
-}
-
-
-/* =========================================================
-   EVENT DATE
-========================================================= */
-
-function getDaysRemaining(){
-
-    if(!selectedEvent)
-        return null;
-
-
-    const eventDate =
-        parseEventDate(
-            selectedEvent.eventDate
-        );
-
-
-    if(!eventDate)
-        return null;
-
-
-    eventDate.setHours(
-        0,0,0,0
-    );
-
-
-    const today =
-        new Date();
-
-    today.setHours(
-        0,0,0,0
-    );
-
-
-    return Math.ceil(
-        (
-            eventDate -
-            today
-        )
-        /
-        (
-            1000 *
-            60 *
-            60 *
-            24
-        )
-    );
-
-}
-
-
-/* =========================================================
-   EVENT DATE PARSER
-========================================================= */
-
-function parseEventDate(value){
-
-    if(!value)
-        return null;
-
-
-    if(
-        Object.prototype.toString.call(value)
-        ===
-        "[object Date]"
-    ){
-
-        return new Date(
-            value.getTime()
-        );
-
     }
 
 
-    const date =
-        new Date(value);
+    /* =========================================================
+       URL PARAMETERS
+    ========================================================= */
 
-
-    if(!isNaN(date.getTime()))
-        return date;
-
-
-    /*
-        Handle DD/MM/YYYY if required.
-    */
-
-    const match =
-        String(value)
-        .match(
-            /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/
+    const params =
+        new URLSearchParams(
+            window.location.search
         );
 
+    const presetEvent =
+        params.get("event");
 
-    if(match){
 
-        const day =
-            Number(match[1]);
+    /* =========================================================
+       SELECT EVENT
+    ========================================================= */
 
-        const month =
-            Number(match[2]) - 1;
+    function selectEvent() {
 
-        const year =
-            Number(match[3]);
-
-        const parsed =
-            new Date(
-                year,
-                month,
-                day
+        const select =
+            document.getElementById(
+                "eventFilter"
             );
 
-        if(!isNaN(parsed.getTime()))
-            return parsed;
+        if (!select) {
+            return;
+        }
 
-    }
 
+        const selectedId =
+            select.value;
 
-    return null;
 
-}
+        if (!selectedId) {
 
+            selectedEvent = null;
 
-/* =========================================================
-   REMINDER AVAILABILITY
-========================================================= */
+            hideAllModules();
 
-function getReminderAvailability(){
+            return;
+        }
 
-    const days =
-        getDaysRemaining();
 
+        selectedEvent =
+            events.find(event => {
 
-    if(days === null){
+                const id =
+                    event.spreadsheetId ||
+                    event.id ||
+                    event.eventId ||
+                    "";
 
-        return {
+                return String(id) ===
+                       String(selectedId);
+            });
 
-            available:false,
 
-            reason:
-                "Event date unavailable."
+        if (!selectedEvent) {
 
-        };
-
-    }
-
-
-    if(days < 0){
-
-        return {
-
-            available:false,
-
-            reason:
-                "Event has already taken place."
-
-        };
-
-    }
-
-
-    if(days <= 7){
-
-        return {
-
-            available:true,
-
-            reason:
-                "Reminder communication is available."
-
-        };
-
-    }
-
-
-    return {
-
-        available:false,
-
-        reason:
-            `Reminder will become available when the event is within 7 days. ${days} days remaining.`
-
-    };
-
-}
-
-
-/* =========================================================
-   LIFECYCLE STATUS
-========================================================= */
-
-function updateLifecycleStatus(){
-
-    if(!selectedEvent)
-        return;
-
-
-    const days =
-        getDaysRemaining();
-
-
-    const reminder =
-        getReminderAvailability();
-
-
-    let reminderText = "";
-
-
-    if(days === null){
-
-        reminderText =
-            "Event date unavailable.";
-
-    }
-    else if(days > 7){
-
-        reminderText =
-            `Reminder not yet available — ${days} days until event.`;
-
-    }
-    else if(days === 7){
-
-        reminderText =
-            "T-7 reminder is now available.";
-
-    }
-    else if(days > 3){
-
-        reminderText =
-            "Reminder window is active. T-7 is available.";
-
-    }
-    else if(days === 3){
-
-        reminderText =
-            "T-3 reminder is now available.";
-
-    }
-    else if(days > 1){
-
-        reminderText =
-            "Reminder window is active.";
-
-    }
-    else if(days === 1){
-
-        reminderText =
-            "T-1 reminder is now available.";
-
-    }
-    else{
-
-        reminderText =
-            "Event is today.";
-
-    }
-
-
-    document.getElementById(
-        "lifecycleStatus"
-    ).innerHTML =
-    `
-        <div class="status-panel">
-
-            <div class="status-row">
-
-                <strong>
-                    📢 Publicity
-                </strong>
-
-                <span class="badge badge-green">
-                    AVAILABLE
-                </span>
-
-            </div>
-
-
-            <div class="status-row">
-
-                <strong>
-                    ⏰ Reminder
-                </strong>
-
-                <span class="badge ${
-                    reminder.available
-                    ? "badge-green"
-                    : "badge-yellow"
-                }">
-
-                    ${
-                        reminder.available
-                        ? "AVAILABLE"
-                        : "NOT YET AVAILABLE"
-                    }
-
-                </span>
-
-            </div>
-
-
-            <div class="status-row">
-
-                <strong>
-                    Event
-                </strong>
-
-                <span>
-
-                    ${
-                        days === 0
-                        ? "Today"
-                        : days > 0
-                        ? `${days} days remaining`
-                        : "Event completed"
-                    }
-
-                </span>
-
-            </div>
-
-        </div>
-    `;
-
-
-    document.getElementById(
-        "reminderAvailabilityText"
-    ).textContent =
-        reminderText;
-
-
-    const reminderButton =
-        document.getElementById(
-            "reminderActivityButton"
-        );
-
-
-    if(reminder.available){
-
-        reminderButton.classList.remove(
-            "disabled"
-        );
-
-    }
-    else{
-
-        reminderButton.classList.add(
-            "disabled"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   ACTIVITY
-========================================================= */
-
-async function selectActivity(activity){
-
-    if(!selectedEvent){
-
-        alert(
-            "Please select an event first."
-        );
-
-        return;
-
-    }
-
-
-    if(activity === "reminder"){
-
-        const availability =
-            getReminderAvailability();
-
-
-        if(!availability.available){
-
-            alert(
-                availability.reason
+            console.warn(
+                "Selected event not found:",
+                selectedId
             );
 
             return;
-
         }
 
-    }
 
+        /*
+         * Normalise the fields used throughout
+         * Communications Centre.
+         */
+        selectedEvent.spreadsheetId =
+            selectedEvent.spreadsheetId ||
+            selectedEvent.id ||
+            selectedEvent.eventId ||
+            "";
 
-    currentActivity =
-        activity;
+        selectedEvent.eventName =
+            getEventName(
+                selectedEvent
+            );
 
-
-    document
-        .querySelectorAll(
-            ".activity-button"
-        )
-        .forEach(
-            btn =>
-                btn.classList.remove("active")
-        );
-
-
-    hideModules();
-
-
-    if(activity === "publicity"){
-
-        document
-            .getElementById(
-                "publicityActivityButton"
-            )
-            .classList.add("active");
-
-
-        document
-            .getElementById(
-                "publicityModule"
-            )
-            .classList.remove("hidden");
-
-
-        await loadPublicity();
-
-    }
-
-
-    if(activity === "reminder"){
-
-        document
-            .getElementById(
-                "reminderActivityButton"
-            )
-            .classList.add("active");
-
-
-        document
-            .getElementById(
-                "reminderModule"
-            )
-            .classList.remove("hidden");
-
-
-        await loadReminder();
-
-    }
-
-}
-
-
-/* =========================================================
-   HIDE MODULES
-========================================================= */
-
-function hideModules(){
-
-    document
-        .getElementById(
-            "publicityModule"
-        )
-        .classList.add("hidden");
-
-
-    document
-        .getElementById(
-            "reminderModule"
-        )
-        .classList.add("hidden");
-
-}
-
-
-function hideAllModules(){
-
-    document
-        .getElementById(
-            "activityCard"
-        )
-        .classList.add("hidden");
-
-
-    document
-        .getElementById(
-            "lifecycleCard"
-        )
-        .classList.add("hidden");
-
-
-    hideModules();
-
-}
-
-
-/* =========================================================
-   PUBLICITY
-========================================================= */
-
-async function loadPublicity(){
-
-    if(!selectedEvent)
-        return;
-
-
-    publicityConfig = {
-
-        spreadsheetId:
-            selectedEvent.spreadsheetId,
-
-        eventName:
-            selectedEvent.eventName,
-
-        eventDate:
-            selectedEvent.eventDate,
-
-        message:
-            ""
-
-    };
-
-
-    document.getElementById(
-        "publicityEventName"
-    ).textContent =
-        selectedEvent.eventName;
-
-
-    document.getElementById(
-        "publicityEventDate"
-    ).textContent =
-        "📅 " +
-        selectedEvent.eventDate;
-
-
-    /*
-        IMPORTANT:
-
-        GS expects:
-
-        e.parameter.data
-
-        containing JSON.
-    */
-
-    try{
-
-        const response =
-            await API.post(
-                "getPublicityConfiguration",
-                {
-                    data:
-                        JSON.stringify({
-
-                            spreadsheetId:
-                                selectedEvent.spreadsheetId
-
-                        })
-                }
+        selectedEvent.eventDate =
+            getEventDate(
+                selectedEvent
             );
 
 
-        if(
-            response.success &&
-            response.data
-        ){
-
-            publicityConfig = {
-
-                ...publicityConfig,
-
-                ...response.data
-
-            };
-
-
+        /*
+         * Display selected event information.
+         */
+        const info =
             document.getElementById(
-                "publicityMessage"
-            ).value =
-                publicityConfig.message || "";
+                "selectedEventInfo"
+            );
 
+        if (info) {
 
-            document.getElementById(
-                "attachmentName"
-            ).textContent =
-                publicityConfig.attachmentName
-                    ?
-                    `Saved poster: ${publicityConfig.attachmentName}`
-                    :
-                    "";
-
+            info.innerHTML = `
+                <strong>
+                    ${escapeHtml(
+                        selectedEvent.eventName
+                    )}
+                </strong>
+                ${
+                    selectedEvent.eventDate
+                        ? `<span>
+                            ${escapeHtml(
+                                selectedEvent.eventDate
+                            )}
+                           </span>`
+                        : ""
+                }
+            `;
         }
 
-    }
-    catch(err){
 
-        console.warn(
-            "Unable to load publicity configuration:",
-            err
+        /*
+         * Show activity/lifecycle areas.
+         */
+        const activityCard =
+            document.getElementById(
+                "activityCard"
+            );
+
+        if (activityCard) {
+            activityCard.style.display =
+                "block";
+        }
+
+
+        const lifecycleCard =
+            document.getElementById(
+                "lifecycleCard"
+            );
+
+        if (lifecycleCard) {
+            lifecycleCard.style.display =
+                "block";
+        }
+
+
+        /*
+         * Reset activity selection.
+         */
+        currentActivity = "";
+
+        document
+            .querySelectorAll(
+                ".activity-btn"
+            )
+            .forEach(button => {
+
+                button.classList.remove(
+                    "active"
+                );
+            });
+
+
+        hideAllModules();
+
+        updateLifecycleStatus();
+    }
+
+
+    /* =========================================================
+       DATE HELPERS
+    ========================================================= */
+
+    function parseEventDate(value) {
+
+        if (!value) {
+            return null;
+        }
+
+        const date =
+            new Date(value);
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+            return null;
+        }
+
+        return date;
+    }
+
+
+    function getDaysRemaining() {
+
+        if (!selectedEvent) {
+            return null;
+        }
+
+        const eventDate =
+            parseEventDate(
+                getEventDate(
+                    selectedEvent
+                )
+            );
+
+        if (!eventDate) {
+            return null;
+        }
+
+        const now =
+            new Date();
+
+        const diff =
+            eventDate.getTime() -
+            now.getTime();
+
+        return Math.ceil(
+            diff /
+            (1000 * 60 * 60 * 24)
         );
-
     }
 
 
-    await loadPublicityAudience();
+    /* =========================================================
+       LIFECYCLE
+    ========================================================= */
 
-}
+    function updateLifecycleStatus() {
+
+        if (!selectedEvent) {
+            return;
+        }
+
+        const days =
+            getDaysRemaining();
 
 
-/* =========================================================
-   PUBLICITY AUDIENCE
-========================================================= */
-
-async function loadPublicityAudience(){
-
-    if(!selectedEvent)
-        return;
+        const reminderButton =
+            document.getElementById(
+                "reminderActivityBtn"
+            );
 
 
-    try{
+        if (!reminderButton) {
+            return;
+        }
+
+
+        /*
+         * Reminder is available only within
+         * 7 days before the event.
+         */
+        if (
+            days !== null &&
+            days >= 0 &&
+            days <= 7
+        ) {
+
+            reminderButton.disabled =
+                false;
+
+            reminderButton.classList.remove(
+                "disabled"
+            );
+
+        } else {
+
+            reminderButton.disabled =
+                true;
+
+            reminderButton.classList.add(
+                "disabled"
+            );
+        }
+    }
+
+
+    /* =========================================================
+       SELECT ACTIVITY
+    ========================================================= */
+
+    async function selectActivity(
+        activity
+    ) {
+
+        if (!selectedEvent) {
+
+            alert(
+                "Please select an event first."
+            );
+
+            return;
+        }
+
+
+        if (
+            activity === "reminder"
+        ) {
+
+            const days =
+                getDaysRemaining();
+
+
+            if (
+                days === null ||
+                days < 0 ||
+                days > 7
+            ) {
+
+                alert(
+                    "Reminder is only available within 7 days before the event."
+                );
+
+                return;
+            }
+        }
+
+
+        currentActivity =
+            activity;
+
+
+        document
+            .querySelectorAll(
+                ".activity-btn"
+            )
+            .forEach(button => {
+
+                button.classList.remove(
+                    "active"
+                );
+            });
+
+
+        const button =
+            document.querySelector(
+                `[data-activity="${activity}"]`
+            );
+
+
+        if (button) {
+
+            button.classList.add(
+                "active"
+            );
+        }
+
+
+        hideAllModules();
+
+
+        if (
+            activity ===
+            "publicity"
+        ) {
+
+            await loadPublicity();
+
+        } else if (
+            activity ===
+            "reminder"
+        ) {
+
+            await loadReminder();
+        }
+    }
+
+
+    /* =========================================================
+       HIDE MODULES
+    ========================================================= */
+
+    function hideAllModules() {
+
+        const modules = [
+            "publicityModule",
+            "reminderModule"
+        ];
+
+
+        modules.forEach(id => {
+
+            const element =
+                document.getElementById(id);
+
+            if (element) {
+
+                element.style.display =
+                    "none";
+            }
+        });
+    }
+
+
+    function hideModules() {
+        hideAllModules();
+    }
+
+
+    /* =========================================================
+       PUBLICITY
+    ========================================================= */
+
+    async function loadPublicity() {
+
+        if (!selectedEvent) {
+            return;
+        }
+
+
+        const module =
+            document.getElementById(
+                "publicityModule"
+            );
+
+        if (module) {
+            module.style.display =
+                "block";
+        }
+
+
+        publicityConfig = {
+            spreadsheetId:
+                selectedEvent.spreadsheetId,
+
+            eventName:
+                getEventName(
+                    selectedEvent
+                ),
+
+            eventDate:
+                getEventDate(
+                    selectedEvent
+                ),
+
+            message: "",
+            attachmentName: ""
+        };
+
+
+        try {
+
+            const response =
+                await API.post(
+                    "getPublicityConfiguration",
+                    {
+                        data:
+                            JSON.stringify({
+                                spreadsheetId:
+                                    selectedEvent.spreadsheetId
+                            })
+                    }
+                );
+
+
+            if (
+                response &&
+                response.success &&
+                response.data
+            ) {
+
+                publicityConfig = {
+                    ...publicityConfig,
+                    ...response.data
+                };
+
+
+                const messageBox =
+                    document.getElementById(
+                        "ccPublicityMessage"
+                    );
+
+                if (messageBox) {
+
+                    messageBox.value =
+                        publicityConfig.message ||
+                        "";
+                }
+
+
+                const attachment =
+                    document.getElementById(
+                        "ccPublicityAttachment"
+                    );
+
+                if (attachment) {
+
+                    const name =
+                        document.getElementById(
+                            "ccPublicityAttachmentName"
+                        );
+
+                    if (name) {
+
+                        name.textContent =
+                            publicityConfig
+                                .attachmentName ||
+                            "";
+                    }
+                }
+            }
+
+
+            await loadPublicityAudience();
+
+        } catch (error) {
+
+            console.error(
+                "loadPublicity:",
+                error
+            );
+        }
+    }
+
+
+    async function loadPublicityAudience() {
+
+        if (!selectedEvent) {
+            return;
+        }
+
 
         const response =
             await API.post(
@@ -6997,447 +6695,320 @@ async function loadPublicityAudience(){
             );
 
 
-        if(!response.success){
+        if (
+            !response ||
+            !response.success
+        ) {
 
             throw new Error(
-                response.message ||
-                "Unable to load publicity audience"
+                response?.message ||
+                "Unable to load publicity audience."
             );
-
         }
-
-
-        publicityAudience =
-            response.data || [];
 
 
         publicityAudience =
             deduplicatePeople(
-                publicityAudience
+                response.data || []
             );
 
 
+        sortByName(
+            publicityAudience
+        );
+
+
         renderPublicityAudience();
-
-    }
-    catch(err){
-
-        console.error(err);
-
-
-        document.getElementById(
-            "publicityTable"
-        ).innerHTML =
-        `
-            <tr>
-
-                <td colspan="6">
-
-                    <div class="empty">
-
-                        Unable to load publicity audience.
-
-                        <br><br>
-
-                        ${escapeHtml(
-                            err.message || ""
-                        )}
-
-                    </div>
-
-                </td>
-
-            </tr>
-        `;
-
     }
 
-}
 
+    function renderPublicityAudience() {
 
-/* =========================================================
-   RENDER PUBLICITY
-========================================================= */
+        const container =
+            document.getElementById(
+                "ccPublicityAudience"
+            );
 
-function renderPublicityAudience(){
-
-    const table =
-        document.getElementById(
-            "publicityTable"
-        );
-
-
-    table.innerHTML = "";
-
-
-    publicityAudience.sort(
-        sortByName
-    );
-
-
-    let sent = 0;
-
-    let pending = 0;
-
-    let registered = 0;
-
-
-    publicityAudience.forEach(
-        p => {
-
-            const status =
-                String(
-                    p.publicityStatus ||
-                    p.PublicityStatus ||
-                    "PENDING"
-                )
-                .toUpperCase();
-
-
-            if(status === "SENT")
-                sent++;
-
-            else
-                pending++;
-
-
-            const engagement =
-                String(
-                    p.engagement ||
-                    p.Engagement ||
-                    ""
-                )
-                .toLowerCase();
-
-
-            if(
-                engagement === "registered"
-            ){
-
-                registered++;
-
-            }
-
+        if (!container) {
+            return;
         }
-    );
 
 
-    document.getElementById(
-        "publicityTotal"
-    ).textContent =
-        publicityAudience.length;
+        const sent =
+            publicityAudience.filter(
+                person =>
+                    String(
+                        person.publicityStatus ||
+                        ""
+                    ).toUpperCase() ===
+                    "SENT"
+            ).length;
 
 
-    document.getElementById(
-        "publicitySent"
-    ).textContent =
-        sent;
+        const pending =
+            publicityAudience.length -
+            sent;
 
 
-    document.getElementById(
-        "publicityPending"
-    ).textContent =
-        pending;
+        const sentCount =
+            document.getElementById(
+                "ccPublicitySentCount"
+            );
+
+        if (sentCount) {
+            sentCount.textContent =
+                sent;
+        }
 
 
-    document.getElementById(
-        "publicityRegistered"
-    ).textContent =
-        registered;
+        const pendingCount =
+            document.getElementById(
+                "ccPublicityPendingCount"
+            );
+
+        if (pendingCount) {
+            pendingCount.textContent =
+                pending;
+        }
 
 
-    if(
-        publicityAudience.length === 0
-    ){
+        container.innerHTML =
+            publicityAudience
+                .map(
+                    (person, index) => {
 
-        table.innerHTML =
-        `
-            <tr>
+                        const status =
+                            String(
+                                person.publicityStatus ||
+                                "PENDING"
+                            ).toUpperCase();
 
-                <td colspan="6">
 
-                    <div class="empty">
+                        const isSent =
+                            status === "SENT";
 
-                        No publicity audience found.
 
-                    </div>
+                        return `
+                            <div class="audience-row">
 
-                </td>
+                                <input
+                                    type="checkbox"
+                                    class="cc-publicity-check"
+                                    data-index="${index}"
+                                    ${
+                                        isSent
+                                            ? "disabled"
+                                            : ""
+                                    }
+                                >
 
-            </tr>
-        `;
+                                <div class="audience-name">
+                                    ${escapeHtml(
+                                        getPersonName(
+                                            person
+                                        )
+                                    )}
+                                </div>
 
-        return;
+                                <div class="audience-mobile">
+                                    ${escapeHtml(
+                                        getPersonMobile(
+                                            person
+                                        )
+                                    )}
+                                </div>
 
+                                <div class="audience-status ${isSent ? "sent" : "pending"}">
+                                    ${isSent ? "SENT" : "PENDING"}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onclick="window.CommunicationsCentre.previewPublicityPerson(${index})"
+                                >
+                                    Preview
+                                </button>
+
+                                ${
+                                    !isSent
+                                        ? `
+                                            <button
+                                                type="button"
+                                                onclick="window.CommunicationsCentre.openManualPublicityWhatsApp(${index})"
+                                            >
+                                                WhatsApp
+                                            </button>
+                                          `
+                                        : ""
+                                }
+
+                            </div>
+                        `;
+                    }
+                )
+                .join("");
     }
 
 
-    publicityAudience.forEach(
-        (p,index) => {
+    function previewPublicityCampaign() {
 
-            const status =
-                String(
-                    p.publicityStatus ||
-                    p.PublicityStatus ||
-                    "PENDING"
-                )
-                .toUpperCase();
+        const message =
+            document.getElementById(
+                "ccPublicityMessage"
+            )?.value || "";
 
 
-            let statusClass =
-                "badge-yellow";
+        if (!message.trim()) {
 
+            alert(
+                "Please enter a publicity message."
+            );
 
-            if(status === "SENT")
-                statusClass =
-                    "badge-green";
-
-
-            if(status === "FAILED")
-                statusClass =
-                    "badge-red";
-
-
-            const name =
-                getPersonName(p);
-
-
-            const mobile =
-                getPersonMobile(p);
-
-
-            const engagement =
-                p.engagement ||
-                p.Engagement ||
-                "Not Registered";
-
-
-            table.innerHTML +=
-            `
-                <tr>
-
-                    <td>
-
-                        <input
-                            type="checkbox"
-                            class="publicityCheck"
-                            value="${index}"
-                            ${
-                                status === "SENT"
-                                ? "disabled"
-                                : ""
-                            }
-                        >
-
-                    </td>
-
-
-                    <td>
-                        ${escapeHtml(name)}
-                    </td>
-
-
-                    <td>
-                        ${escapeHtml(mobile)}
-                    </td>
-
-
-                    <td>
-
-                        <span class="badge ${statusClass}">
-                            ${escapeHtml(status)}
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <span class="badge badge-blue">
-                            ${escapeHtml(engagement)}
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <button
-                            class="preview"
-                            onclick="previewPublicityPerson(${index})">
-
-                            Preview
-
-                        </button>
-
-
-                        ${
-                            status !== "SENT"
-
-                            ?
-
-                            `
-                            <button
-                                class="whatsapp"
-                                onclick="openManualPublicityWhatsApp(${index})">
-
-                                WhatsApp
-
-                            </button>
-                            `
-
-                            :
-
-                            ""
-                        }
-
-                    </td>
-
-                </tr>
-            `;
-
+            return;
         }
-    );
 
-}
-
-
-/* =========================================================
-   PUBLICITY PREVIEW
-========================================================= */
-
-function previewPublicityCampaign(){
-
-    if(!selectedEvent)
-        return;
-
-
-    const message =
-        document.getElementById(
-            "publicityMessage"
-        ).value;
-
-
-    const poster =
-        document.getElementById(
-            "attachmentName"
-        ).textContent;
-
-
-    alert(
-
-`PUBLICITY PREVIEW
-
-Event:
-${selectedEvent.eventName}
-
-Date:
-${selectedEvent.eventDate}
-
-Message:
-${message}
-
-Poster:
-${poster || "No poster selected"}`
-    );
-
-}
-
-
-function previewPublicityPerson(index){
-
-    const person =
-        publicityAudience[index];
-
-
-    if(!person)
-        return;
-
-
-    const baseMessage =
-        document.getElementById(
-            "publicityMessage"
-        ).value;
-
-
-    const message =
-        personaliseMessage(
-            baseMessage,
-            person
-        );
-
-
-    alert(
-`To: ${getPersonName(person)}
-
-${message}
-
-Poster:
-${
-    publicityConfig.attachmentName ||
-    "No poster selected"
-}`
-    );
-
-}
-
-
-/* =========================================================
-   SAVE PUBLICITY
-========================================================= */
-
-async function savePublicityConfiguration(){
-
-    if(!selectedEvent)
-        return;
-
-
-    const message =
-        document.getElementById(
-            "publicityMessage"
-        ).value;
-
-
-    if(!message.trim()){
 
         alert(
-            "Please enter a publicity message first."
+            personaliseMessage(
+                message,
+                publicityAudience[0]
+            )
+        );
+    }
+
+
+    function previewPublicityPerson(
+        index
+    ) {
+
+        const person =
+            publicityAudience[index];
+
+        if (!person) {
+            return;
+        }
+
+
+        const message =
+            document.getElementById(
+                "ccPublicityMessage"
+            )?.value || "";
+
+
+        alert(
+            personaliseMessage(
+                message,
+                person
+            )
+        );
+    }
+
+
+    function openManualPublicityWhatsApp(
+        index
+    ) {
+
+        const person =
+            publicityAudience[index];
+
+        if (!person) {
+            return;
+        }
+
+
+        const status =
+            String(
+                person.publicityStatus ||
+                ""
+            ).toUpperCase();
+
+
+        if (status === "SENT") {
+
+            alert(
+                "This publicity has already been sent."
+            );
+
+            return;
+        }
+
+
+        const mobile =
+            getPersonMobile(
+                person
+            );
+
+
+        if (!mobile) {
+
+            alert(
+                "This person does not have a mobile number."
+            );
+
+            return;
+        }
+
+
+        const message =
+            document.getElementById(
+                "ccPublicityMessage"
+            )?.value || "";
+
+
+        if (!message.trim()) {
+
+            alert(
+                "Please enter a publicity message first."
+            );
+
+            return;
+        }
+
+
+        const personalised =
+            personaliseMessage(
+                message,
+                person
+            );
+
+
+        const phone =
+            normalisePhone(
+                mobile
+            );
+
+
+        window.open(
+            `https://wa.me/${phone}?text=${encodeURIComponent(personalised)}`,
+            "_blank"
         );
 
-        return;
 
+        markCommunicationSent(
+            person,
+            "PUBLICITY",
+            "",
+            personalised
+        );
     }
 
 
-    publicityConfig.message =
-        message;
+    async function savePublicityConfiguration() {
+
+        if (!selectedEvent) {
+            return;
+        }
 
 
-    const file =
-        document.getElementById(
-            "ccpublicityAttachment"
-        ).files[0];
+        const message =
+            document.getElementById(
+                "ccPublicityMessage"
+            )?.value || "";
 
 
-    if(file){
+        publicityConfig.message =
+            message;
 
-        publicityConfig.attachmentName =
-            file.name;
-
-        publicityConfig.attachmentMimeType =
-            file.type;
-
-    }
-
-
-    /*
-        GS only receives attachmentName.
-
-        The actual file is NOT uploaded by
-        the current GS router.
-    */
-
-    try{
 
         const response =
             await API.post(
@@ -7447,425 +7018,225 @@ async function savePublicityConfiguration(){
                         selectedEvent.spreadsheetId,
 
                     eventName:
-                        selectedEvent.eventName,
+                        getEventName(
+                            selectedEvent
+                        ),
 
                     eventDate:
-                        selectedEvent.eventDate,
+                        getEventDate(
+                            selectedEvent
+                        ),
 
                     message:
-                        publicityConfig.message,
+                        message,
 
                     attachmentName:
-                        publicityConfig.attachmentName ||
-                        ""
+                        publicityConfig
+                            .attachmentName || ""
                 }
             );
 
 
-        if(!response.success){
+        if (
+            !response ||
+            !response.success
+        ) {
 
             throw new Error(
-                response.message ||
-                "Unable to save publicity"
+                response?.message ||
+                "Unable to save publicity configuration."
             );
-
         }
 
 
         alert(
             "Publicity configuration saved."
         );
-
     }
-    catch(err){
-
-        console.error(err);
 
 
-        alert(
-            "Unable to save publicity configuration.\n\n" +
-            err.message
+    async function refreshPublicityAudience() {
+
+        await loadPublicityAudience();
+    }
+
+
+    async function preparePublicityWhatsApp(
+        person,
+        message
+    ) {
+
+        return await API.post(
+            "preparePublicityWhatsApp",
+            {
+                spreadsheetId:
+                    selectedEvent
+                        ?.spreadsheetId,
+
+                eventName:
+                    getEventName(
+                        selectedEvent
+                    ),
+
+                personId:
+                    getPersonId(
+                        person
+                    ),
+
+                name:
+                    getPersonName(
+                        person
+                    ),
+
+                mobile:
+                    getPersonMobile(
+                        person
+                    ),
+
+                message
+            }
         );
-
     }
 
-}
 
+    async function sendSelectedPublicity() {
 
-/* =========================================================
-   REFRESH PUBLICITY
-========================================================= */
-
-async function refreshPublicityAudience(){
-
-    await loadPublicityAudience();
-
-}
-
-
-/* =========================================================
-   PREPARE PUBLICITY WHATSAPP
-========================================================= */
-
-async function preparePublicityWhatsApp(
-    person,
-    message
-){
-
-    try{
-
-        const response =
-            await API.post(
-                "preparePublicityWhatsApp",
-                {
-
-                    personId:
-                        getPersonId(person),
-
-                    eventId:
-                        selectedEvent.spreadsheetId,
-
-                    eventName:
-                        selectedEvent.eventName,
-
-                    mobile:
-                        getPersonMobile(person),
-
-                    name:
-                        getPersonName(person),
-
-                    message:
-                        message
-
-                }
+        const selected =
+            Array.from(
+                document.querySelectorAll(
+                    ".cc-publicity-check:checked"
+                )
             );
 
 
-        if(!response.success){
+        if (!selected.length) {
 
-            throw new Error(
-                response.message ||
-                "Unable to prepare WhatsApp message"
+            alert(
+                "Please select at least one person."
             );
 
+            return;
         }
 
 
-        return response;
-
-    }
-    catch(err){
-
-        console.warn(
-            "preparePublicityWhatsApp:",
-            err
-        );
-
-        /*
-            The browser can still open WhatsApp
-            directly if preparation is unavailable.
-        */
-
-        return null;
-
-    }
-
-}
+        if (
+            !confirm(
+                `Send publicity to ${selected.length} selected person(s)?`
+            )
+        ) {
+            return;
+        }
 
 
+        for (
+            const checkbox of selected
+        ) {
 
-/* =========================================================
-   MANUAL WHATSAPP PUBLICITY
-========================================================= */
-
-/* =========================================================
-   MANUAL WHATSAPP PUBLICITY
-========================================================= */
-
-async function openManualPublicityWhatsApp(index){
-
-    const person =
-        publicityAudience[index];
-
-    if(!person)
-        return;
+            const index =
+                Number(
+                    checkbox.dataset.index
+                );
 
 
-    const status =
-        String(
-            person.publicityStatus ||
-            person.PublicityStatus ||
-            ""
-        )
-        .toUpperCase();
+            await openManualPublicityWhatsApp(
+                index
+            );
+        }
 
 
-    if(status === "SENT"){
-
-        alert(
-            getPersonName(person) +
-            " has already received publicity for this event."
-        );
-
-        return;
+        await loadPublicityAudience();
     }
 
 
-    const phone =
-        normalisePhone(
-            getPersonMobile(person)
-        );
+    /* =========================================================
+       REMINDER
+    ========================================================= */
+
+    async function loadReminder() {
+
+        if (!selectedEvent) {
+            return;
+        }
 
 
-    if(!phone){
-
-        alert(
-            getPersonName(person) +
-            " does not have a valid mobile number."
-        );
-
-        return;
-    }
+        const days =
+            getDaysRemaining();
 
 
-    const baseMessage =
-        document.getElementById(
-            "publicityMessage"
-        ).value;
+        if (
+            days === null ||
+            days < 0 ||
+            days > 7
+        ) {
 
-
-    if(!baseMessage.trim()){
-
-        alert(
-            "Please prepare the publicity message first."
-        );
-
-        return;
-    }
-
-
-    const message =
-        personaliseMessage(
-            baseMessage,
-            person
-        );
-
-
-    /*
-        Record that WhatsApp publicity was prepared.
-    */
-
-    await preparePublicityWhatsApp(
-        person,
-        message
-    );
-
-
-    /*
-        Open WhatsApp.
-    */
-
-    const url =
-        "https://wa.me/" +
-        phone +
-        "?text=" +
-        encodeURIComponent(
-            message
-        );
-
-
-    window.open(
-        url,
-        "_blank"
-    );
-
-
-    /*
-        Immediately mark Publicity as SENT
-        after the WhatsApp button is pressed.
-    */
-
-    await markCommunicationSent(
-        person,
-        "PUBLICITY",
-        "",
-        message
-    );
-
-}
-
-
-
-
-
-/* =========================================================
-   SELECTED PUBLICITY
-========================================================= */
-
-async function sendSelectedPublicity(){
-
-    const selected =
-        document.querySelectorAll(
-            ".publicityCheck:checked"
-        );
-
-
-    if(selected.length === 0){
-
-        alert(
-            "Please select people first."
-        );
-
-        return;
-
-    }
-
-
-    const confirmed =
-        confirm(
-            `Open WhatsApp for ${selected.length} selected people?`
-        );
-
-
-    if(!confirmed)
-        return;
-
-
-    for(
-        const checkbox of selected
-    ){
-
-        const index =
-            Number(
-                checkbox.value
+            alert(
+                "Reminder is only available within 7 days before the event."
             );
 
+            return;
+        }
 
-        await openManualPublicityWhatsApp(
-            index
-        );
 
+        const module =
+            document.getElementById(
+                "reminderModule"
+            );
+
+        if (module) {
+            module.style.display =
+                "block";
+        }
+
+
+        reminderConfig = {
+
+            spreadsheetId:
+                selectedEvent.spreadsheetId,
+
+            eventName:
+                getEventName(
+                    selectedEvent
+                ),
+
+            eventDate:
+                getEventDate(
+                    selectedEvent
+                ),
+
+            reminderType:
+                determineDefaultReminderStage(),
+
+            message: ""
+        };
+
+
+        await loadReminderConfiguration();
+
+        await loadParticipants();
     }
 
 
-    await loadPublicityAudience();
+    function determineDefaultReminderStage() {
 
-}
-
-
-/* =========================================================
-   REMINDER
-========================================================= */
-
-async function loadReminder(){
-
-    if(!selectedEvent)
-        return;
+        const days =
+            getDaysRemaining();
 
 
-    const availability =
-        getReminderAvailability();
+        if (days <= 1) {
+            return "T-1";
+        }
 
 
-    if(!availability.available){
+        if (days <= 3) {
+            return "T-3";
+        }
 
-        alert(
-            availability.reason
-        );
 
-        return;
-
+        return "T-7";
     }
 
 
-    reminderConfig = {
-
-        spreadsheetId:
-            selectedEvent.spreadsheetId,
-
-        eventName:
-            selectedEvent.eventName,
-
-        eventDate:
-            selectedEvent.eventDate,
-
-        reminderType:
-            determineDefaultReminderStage()
-
-    };
-
-
-    document.getElementById(
-        "reminderType"
-    ).value =
-        reminderConfig.reminderType;
-
-
-    document.getElementById(
-        "reminderEventName"
-    ).textContent =
-        selectedEvent.eventName;
-
-
-    document.getElementById(
-        "reminderEventDate"
-    ).textContent =
-        "📅 " +
-        selectedEvent.eventDate;
-
-
-    updateReminderStageNotice();
-
-
-    await loadReminderConfiguration();
-
-    await loadParticipants();
-
-}
-
-
-/* =========================================================
-   DEFAULT REMINDER STAGE
-========================================================= */
-
-function determineDefaultReminderStage(){
-
-    const days =
-        getDaysRemaining();
-
-
-    if(days <= 1)
-        return "T-1";
-
-
-    if(days <= 3)
-        return "T-3";
-
-
-    return "T-7";
-
-}
-
-
-/* =========================================================
-   LOAD REMINDER CONFIGURATION
-========================================================= */
-
-async function loadReminderConfiguration(){
-
-    if(!selectedEvent)
-        return;
-
-
-    try{
-
-        /*
-            IMPORTANT:
-
-            GS expects:
-
-            JSON.parse(e.parameter.data)
-        */
+    async function loadReminderConfiguration() {
 
         const response =
             await API.post(
@@ -7873,214 +7244,66 @@ async function loadReminderConfiguration(){
                 {
                     data:
                         JSON.stringify({
-
                             spreadsheetId:
-                                selectedEvent.spreadsheetId,
-
-                            reminderType:
-                                reminderConfig.reminderType
-
+                                selectedEvent
+                                    .spreadsheetId
                         })
                 }
             );
 
 
-        if(!response.success){
+        if (
+            response &&
+            response.success &&
+            response.data
+        ) {
 
-            throw new Error(
-                response.message ||
-                "Unable to load reminder configuration"
+            reminderConfig = {
+                ...reminderConfig,
+                ...response.data
+            };
+        }
+
+
+        updateReminderStageNotice();
+    }
+
+
+    function changeReminderType(
+        type
+    ) {
+
+        reminderConfig.reminderType =
+            type;
+
+
+        updateReminderStageNotice();
+
+        renderParticipants();
+    }
+
+
+    function updateReminderStageNotice() {
+
+        const notice =
+            document.getElementById(
+                "ccReminderStageNotice"
             );
 
+        if (!notice) {
+            return;
         }
 
 
-        const saved =
-            response.data;
-
-
-        if(saved){
-
-            document.getElementById(
-                "reportingTime"
-            ).value =
-                saved.reportingTime || "";
-
-
-            document.getElementById(
-                "eventTime"
-            ).value =
-                saved.eventTime || "";
-
-
-            document.getElementById(
-                "venue"
-            ).value =
-                saved.venue || "";
-
-
-            document.getElementById(
-                "location"
-            ).value =
-                saved.location || "";
-
-
-            document.getElementById(
-                "importantInfo"
-            ).value =
-                saved.importantInfo || "";
-
-
-            document.getElementById(
-                "customMessage"
-            ).value =
-                saved.customMessage || "";
-
-        }
-
-    }
-    catch(err){
-
-        console.warn(
-            "Unable to load reminder configuration:",
-            err
-        );
-
+        notice.textContent =
+            `Current reminder stage: ${
+                reminderConfig.reminderType ||
+                determineDefaultReminderStage()
+            }`;
     }
 
 
-    updateReminderStageNotice();
-
-}
-
-
-/* =========================================================
-   CHANGE REMINDER TYPE
-========================================================= */
-
-async function changeReminderType(){
-
-    if(!selectedEvent)
-        return;
-
-
-    reminderConfig.reminderType =
-        document.getElementById(
-            "reminderType"
-        ).value;
-
-
-    await loadReminderConfiguration();
-
-    await loadParticipants();
-
-}
-
-
-/* =========================================================
-   REMINDER STAGE NOTICE
-========================================================= */
-
-function updateReminderStageNotice(){
-
-    const stage =
-        reminderConfig.reminderType;
-
-
-    const days =
-        getDaysRemaining();
-
-
-    let text = "";
-
-
-    if(stage === "T-7"){
-
-        text =
-            "T-7 reminder. This reminder is intended for approximately one week before the event.";
-
-    }
-
-
-    if(stage === "T-3"){
-
-        text =
-            "T-3 reminder. This reminder is intended for approximately three days before the event.";
-
-    }
-
-
-    if(stage === "T-1"){
-
-        text =
-            "T-1 reminder. This reminder is intended for the day before the event.";
-
-    }
-
-
-    if(days !== null){
-
-        text +=
-            ` Current event timing: ${days} day(s) remaining.`;
-
-    }
-
-
-    document.getElementById(
-        "reminderStageNotice"
-    ).textContent =
-        text;
-
-}
-
-
-/* =========================================================
-   SAVE REMINDER CONFIGURATION
-========================================================= */
-
-async function saveReminderConfig(){
-
-    if(!selectedEvent)
-        return;
-
-
-    reminderConfig.reportingTime =
-        document.getElementById(
-            "reportingTime"
-        ).value;
-
-
-    reminderConfig.eventTime =
-        document.getElementById(
-            "eventTime"
-        ).value;
-
-
-    reminderConfig.venue =
-        document.getElementById(
-            "venue"
-        ).value;
-
-
-    reminderConfig.location =
-        document.getElementById(
-            "location"
-        ).value;
-
-
-    reminderConfig.importantInfo =
-        document.getElementById(
-            "importantInfo"
-        ).value;
-
-
-    reminderConfig.customMessage =
-        document.getElementById(
-            "customMessage"
-        ).value;
-
-
-    try{
+    async function saveReminderConfig() {
 
         const response =
             await API.post(
@@ -8089,1195 +7312,810 @@ async function saveReminderConfig(){
             );
 
 
-        if(!response.success){
+        if (
+            !response ||
+            !response.success
+        ) {
 
             throw new Error(
-                response.message ||
-                "Unable to save reminder configuration"
+                response?.message ||
+                "Unable to save reminder configuration."
             );
-
         }
 
 
         alert(
             "Reminder configuration saved."
         );
-
-
-        await loadParticipants();
-
-    }
-    catch(err){
-
-        console.error(err);
-
-
-        alert(
-            "Unable to save reminder configuration.\n\n" +
-            err.message
-        );
-
     }
 
-}
 
-
-/* =========================================================
-   LOAD PARTICIPANTS
-========================================================= */
-
-async function loadParticipants(){
-
-    if(!selectedEvent)
-        return;
-
-
-    try{
+    async function loadParticipants() {
 
         const response =
             await API.post(
                 "getReminderParticipants",
                 {
-
                     spreadsheetId:
-                        selectedEvent.spreadsheetId,
+                        selectedEvent
+                            .spreadsheetId,
 
                     reminderType:
-                        reminderConfig.reminderType
-
+                        reminderConfig
+                            .reminderType
                 }
             );
 
 
-        if(!response.success){
+        if (
+            !response ||
+            !response.success
+        ) {
 
             throw new Error(
-                response.message ||
-                "Unable to load participants"
+                response?.message ||
+                "Unable to load reminder participants."
             );
-
         }
-
-
-        participants =
-            response.data || [];
 
 
         participants =
             deduplicatePeople(
-                participants
+                response.data || []
             );
+
+
+        sortByName(
+            participants
+        );
 
 
         renderParticipants();
-
-    }
-    catch(err){
-
-        console.error(err);
-
-
-        document.getElementById(
-            "participantTable"
-        ).innerHTML =
-        `
-            <tr>
-
-                <td colspan="6">
-
-                    <div class="empty">
-
-                        Unable to load participants.
-
-                        <br><br>
-
-                        ${escapeHtml(
-                            err.message || ""
-                        )}
-
-                    </div>
-
-                </td>
-
-            </tr>
-        `;
-
     }
 
-}
 
+    function renderParticipants() {
 
-/* =========================================================
-   RENDER PARTICIPANTS
-========================================================= */
+        const container =
+            document.getElementById(
+                "ccReminderParticipants"
+            );
 
-function renderParticipants(){
-
-    const table =
-        document.getElementById(
-            "participantTable"
-        );
-
-
-    table.innerHTML = "";
-
-
-    participants.sort(
-        sortByName
-    );
-
-
-    let sent = 0;
-
-    let pending = 0;
-
-    let failed = 0;
-
-
-    participants.forEach(
-        p => {
-
-            const status =
-                String(
-                    p.reminderStatus ||
-                    p.ReminderStatus ||
-                    "PENDING"
-                )
-                .toUpperCase();
-
-
-            if(status === "SENT")
-                sent++;
-
-            else if(status === "FAILED")
-                failed++;
-
-            else
-                pending++;
-
+        if (!container) {
+            return;
         }
-    );
 
 
-    document.getElementById(
-        "reminderTotal"
-    ).textContent =
-        participants.length;
+        container.innerHTML =
+            participants
+                .map(
+                    (person, index) => {
+
+                        const status =
+                            String(
+                                person.reminderStatus ||
+                                "PENDING"
+                            ).toUpperCase();
 
 
-    document.getElementById(
-        "reminderSent"
-    ).textContent =
-        sent;
+                        const isSent =
+                            status === "SENT";
 
 
-    document.getElementById(
-        "reminderPending"
-    ).textContent =
-        pending;
+                        return `
+                            <div class="participant-row">
 
+                                <input
+                                    type="checkbox"
+                                    class="cc-reminder-check"
+                                    data-index="${index}"
+                                    ${
+                                        isSent
+                                            ? "disabled"
+                                            : ""
+                                    }
+                                >
 
-    document.getElementById(
-        "reminderFailed"
-    ).textContent =
-        failed;
+                                <div class="participant-name">
+                                    ${escapeHtml(
+                                        getPersonName(
+                                            person
+                                        )
+                                    )}
+                                </div>
 
+                                <div class="participant-mobile">
+                                    ${escapeHtml(
+                                        getPersonMobile(
+                                            person
+                                        )
+                                    )}
+                                </div>
 
-    if(
-        participants.length === 0
-    ){
+                                <div class="participant-status ${isSent ? "sent" : "pending"}">
+                                    ${isSent ? "SENT" : "PENDING"}
+                                </div>
 
-        table.innerHTML =
-        `
-            <tr>
+                                <button
+                                    type="button"
+                                    onclick="window.CommunicationsCentre.previewReminder(${index})"
+                                >
+                                    Preview
+                                </button>
 
-                <td colspan="6">
+                                ${
+                                    !isSent
+                                        ? `
+                                            <button
+                                                type="button"
+                                                onclick="window.CommunicationsCentre.openManualReminderWhatsApp(${index})"
+                                            >
+                                                WhatsApp
+                                            </button>
+                                          `
+                                        : ""
+                                }
 
-                    <div class="empty">
-
-                        No registered participants
-                        requiring this reminder.
-
-                    </div>
-
-                </td>
-
-            </tr>
-        `;
-
-        return;
-
-    }
-
-
-    participants.forEach(
-        (p,index) => {
-
-            const status =
-                String(
-                    p.reminderStatus ||
-                    p.ReminderStatus ||
-                    "PENDING"
+                            </div>
+                        `;
+                    }
                 )
-                .toUpperCase();
-
-
-            let statusClass =
-                "badge-yellow";
-
-
-            if(status === "SENT")
-                statusClass =
-                    "badge-green";
-
-
-            if(status === "FAILED")
-                statusClass =
-                    "badge-red";
-
-
-            table.innerHTML +=
-            `
-                <tr>
-
-                    <td>
-
-                        <input
-                            type="checkbox"
-                            class="personCheck"
-                            value="${index}"
-                            ${
-                                status === "SENT"
-                                ? "disabled"
-                                : ""
-                            }
-                        >
-
-                    </td>
-
-
-                    <td>
-
-                        ${escapeHtml(
-                            getPersonName(p)
-                        )}
-
-                    </td>
-
-
-                    <td>
-
-                        ${escapeHtml(
-                            getPersonMobile(p)
-                        )}
-
-                    </td>
-
-
-                    <td>
-
-                        <span class="badge badge-blue">
-
-                            ${escapeHtml(
-                                reminderConfig.reminderType
-                            )}
-
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <span class="badge ${statusClass}">
-
-                            ${escapeHtml(status)}
-
-                        </span>
-
-                    </td>
-
-
-                    <td>
-
-                        <button
-                            class="preview"
-                            onclick="previewReminder(${index})">
-
-                            Preview
-
-                        </button>
-
-
-                        ${
-                            status !== "SENT"
-
-                            ?
-
-                            `
-                            <button
-                                class="whatsapp"
-                                onclick="openManualReminderWhatsApp(${index})">
-
-                                WhatsApp
-
-                            </button>
-                            `
-
-                            :
-
-                            ""
-                        }
-
-                    </td>
-
-                </tr>
-            `;
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   GENERATE REMINDER MESSAGE
-========================================================= */
-
-function generateReminderMessage(person){
-
-    const name =
-        getPersonName(person);
-
-
-    let intro = "";
-
-
-    switch(
-        reminderConfig.reminderType
-    ){
-
-        case "T-7":
-
-            intro =
-`Hi ${name}! 👋
-
-Thank you for registering for *${reminderConfig.eventName}*.
-We are delighted that you'll be joining us!`;
-
-            break;
-
-
-        case "T-3":
-
-            intro =
-`Hi ${name}! 😊
-
-Only *3 days to go* until *${reminderConfig.eventName}*!
-Our team is preparing and we're excited to welcome you.`;
-
-            break;
-
-
-        case "T-1":
-
-            intro =
-`Hi ${name}! 👋
-
-Just a friendly reminder that *${reminderConfig.eventName}* is happening *tomorrow*!
-We're looking forward to seeing you.`;
-
-            break;
-
+                .join("");
     }
 
 
-    let message =
-`${intro}
+    function generateReminderMessage(
+        person
+    ) {
 
-📅 *Date*: ${reminderConfig.eventDate}
-🕒 *Reporting Time*: ${reminderConfig.reportingTime || ""}
-⏰ *Programme Starts*: ${reminderConfig.eventTime || ""}
-📍 *Venue*: ${reminderConfig.venue || ""}
-📌 *Location*: ${reminderConfig.location || ""}
-
-`;
-
-
-    if(
-        reminderConfig.importantInfo
-    ){
-
-        message +=
-`ℹ️ *Important Information*
-${reminderConfig.importantInfo}
-
-`;
-
-    }
-
-
-    if(
-        reminderConfig.customMessage
-    ){
-
-        message +=
-`💬 *A Message From Us*
-${reminderConfig.customMessage}
-
-`;
-
-    }
-
-
-    message +=
-`If you have any questions or need assistance, feel free to let us know.
-
-We pray that this gathering will be a meaningful and encouraging time for you, and we look forward to welcoming you soon.
-
-Blessings,
-*COOS Missions Team*`;
-
-
-    return message;
-
-}
-
-
-/* =========================================================
-   PREVIEW REMINDER
-========================================================= */
-
-function previewReminder(index){
-
-    const person =
-        participants[index];
-
-
-    if(!person)
-        return;
-
-
-    alert(
-        generateReminderMessage(
-            person
-        )
-    );
-
-}
-
-
-function previewReminderForFirstPerson(){
-
-    if(
-        participants.length === 0
-    ){
-
-        alert(
-            "No participants available for preview."
-        );
-
-        return;
-
-    }
-
-
-    previewReminder(0);
-
-}
-
-
-/* =========================================================
-   PREPARE REMINDER WHATSAPP
-========================================================= */
-
-async function prepareReminderWhatsApp(
-    person,
-    message
-){
-
-    try{
-
-        const response =
-            await API.post(
-                "prepareReminderWhatsApp",
-                {
-
-                    personId:
-                        getPersonId(person),
-
-                    eventId:
-                        selectedEvent.spreadsheetId,
-
-                    eventName:
-                        selectedEvent.eventName,
-
-                    mobile:
-                        getPersonMobile(person),
-
-                    name:
-                        getPersonName(person),
-
-                    reminderType:
-                        reminderConfig.reminderType,
-
-                    message:
-                        message
-
-                }
+        const name =
+            getPersonName(
+                person
             );
 
 
-        if(!response.success){
+        const stage =
+            reminderConfig.reminderType ||
+            determineDefaultReminderStage();
 
-            throw new Error(
-                response.message ||
-                "Unable to prepare reminder"
-            );
 
+        if (stage === "T-7") {
+
+            return `Hi ${name}, just a reminder about the upcoming event. We look forward to seeing you!`;
         }
 
 
-        return response;
+        if (stage === "T-3") {
 
-    }
-    catch(err){
+            return `Hi ${name}, our event is coming up soon. We hope you are able to join us!`;
+        }
 
-        console.warn(
-            "prepareReminderWhatsApp:",
-            err
-        );
 
-        return null;
-
+        return `Hi ${name}, this is a final reminder for the upcoming event. See you soon!`;
     }
 
-}
 
+    function previewReminder(
+        index
+    ) {
 
-/* =========================================================
-   MANUAL WHATSAPP REMINDER
-========================================================= */
+        const person =
+            participants[index];
 
-async function openManualReminderWhatsApp(index){
+        if (!person) {
+            return;
+        }
 
-    const person =
-        participants[index];
-
-
-    if(!person)
-        return;
-
-
-    const status =
-        String(
-            person.reminderStatus ||
-            person.ReminderStatus ||
-            ""
-        )
-        .toUpperCase();
-
-
-    if(status === "SENT"){
 
         alert(
-            `${getPersonName(person)} has already received this reminder.`
+            generateReminderMessage(
+                person
+            )
         );
-
-        return;
-
     }
 
 
-    const phone =
-        normalisePhone(
-            getPersonMobile(person)
-        );
+    function previewReminderForFirstPerson() {
+
+        if (!participants.length) {
+
+            alert(
+                "No participants available."
+            );
+
+            return;
+        }
 
 
-    if(!phone){
-
-        alert(
-            `${getPersonName(person)} does not have a valid mobile number.`
-        );
-
-        return;
-
+        previewReminder(0);
     }
 
 
-    const message =
-        generateReminderMessage(
-            person
-        );
-
-
-    await prepareReminderWhatsApp(
+    async function prepareReminderWhatsApp(
         person,
         message
-    );
+    ) {
+
+        return await API.post(
+            "prepareReminderWhatsApp",
+            {
+                spreadsheetId:
+                    selectedEvent
+                        ?.spreadsheetId,
+
+                eventName:
+                    getEventName(
+                        selectedEvent
+                    ),
+
+                personId:
+                    getPersonId(
+                        person
+                    ),
+
+                name:
+                    getPersonName(
+                        person
+                    ),
+
+                mobile:
+                    getPersonMobile(
+                        person
+                    ),
+
+                reminderType:
+                    reminderConfig
+                        .reminderType,
+
+                message
+            }
+        );
+    }
 
 
-    const url =
-        "https://wa.me/" +
-        phone +
-        "?text=" +
-        encodeURIComponent(
+    async function openManualReminderWhatsApp(
+        index
+    ) {
+
+        const person =
+            participants[index];
+
+        if (!person) {
+            return;
+        }
+
+
+        const status =
+            String(
+                person.reminderStatus ||
+                ""
+            ).toUpperCase();
+
+
+        if (status === "SENT") {
+
+            alert(
+                "This reminder has already been sent."
+            );
+
+            return;
+        }
+
+
+        const mobile =
+            getPersonMobile(
+                person
+            );
+
+
+        if (!mobile) {
+
+            alert(
+                "This person does not have a mobile number."
+            );
+
+            return;
+        }
+
+
+        const message =
+            generateReminderMessage(
+                person
+            );
+
+
+        const phone =
+            normalisePhone(
+                mobile
+            );
+
+
+        window.open(
+            `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+            "_blank"
+        );
+
+
+        const sent =
+            confirm(
+                "Did you send the reminder?"
+            );
+
+
+        if (!sent) {
+            return;
+        }
+
+
+        await markCommunicationSent(
+            person,
+            "REMINDER",
+            reminderConfig.reminderType,
             message
         );
-
-
-    window.open(
-        url,
-        "_blank"
-    );
-
-
-    const sent =
-        confirm(
-`
-WhatsApp has been opened for ${getPersonName(person)}.
-
-Please check the message and press Send.
-
-Did you send the reminder?
-`
-    );
-
-
-    if(!sent)
-        return;
-
-
-    await markCommunicationSent(
-        person,
-        "REMINDER",
-        reminderConfig.reminderType,
-        message
-    );
-
-}
-
-
-/* =========================================================
-   SELECTED REMINDER
-========================================================= */
-
-async function sendSelectedReminder(){
-
-    const selected =
-        document.querySelectorAll(
-            ".personCheck:checked"
-        );
-
-
-    if(selected.length === 0){
-
-        alert(
-            "Please select people first."
-        );
-
-        return;
-
     }
 
 
-    const confirmed =
-        confirm(
-            `Open WhatsApp for ${selected.length} selected people?`
-        );
+    async function sendSelectedReminder() {
 
-
-    if(!confirmed)
-        return;
-
-
-    for(
-        const checkbox of selected
-    ){
-
-        const index =
-            Number(
-                checkbox.value
+        const selected =
+            Array.from(
+                document.querySelectorAll(
+                    ".cc-reminder-check:checked"
+                )
             );
 
 
-        await openManualReminderWhatsApp(
-            index
-        );
+        if (!selected.length) {
 
+            alert(
+                "Please select at least one person."
+            );
+
+            return;
+        }
+
+
+        if (
+            !confirm(
+                `Send reminder to ${selected.length} selected person(s)?`
+            )
+        ) {
+            return;
+        }
+
+
+        for (
+            const checkbox of selected
+        ) {
+
+            const index =
+                Number(
+                    checkbox.dataset.index
+                );
+
+
+            await openManualReminderWhatsApp(
+                index
+            );
+        }
+
+
+        await loadParticipants();
     }
 
 
-    await loadParticipants();
+    /* =========================================================
+       MARK COMMUNICATION SENT
+    ========================================================= */
 
-}
+    async function markCommunicationSent(
+        person,
+        type,
+        stage,
+        message
+    ) {
 
+        if (!selectedEvent) {
+            return;
+        }
 
-/* =========================================================
-   MARK COMMUNICATION SENT
-========================================================= */
-
-/*
-    THIS REPLACES THE OLD:
-
-        recordCommunicationStatus()
-
-    The GS router exposes:
-
-        markCommunicationSent
-*/
-
-async function markCommunicationSent(
-    person,
-    type,
-    stage,
-    message
-){
-
-    try{
 
         const payload = {
 
-            personId:
-                getPersonId(person),
+            spreadsheetId:
+                selectedEvent
+                    .spreadsheetId,
 
             eventId:
-                selectedEvent.spreadsheetId,
+                selectedEvent.eventId ||
+                selectedEvent.id ||
+                "",
 
             eventName:
-                selectedEvent.eventName,
+                getEventName(
+                    selectedEvent
+                ),
+
+            personId:
+                getPersonId(
+                    person
+                ),
 
             name:
-                getPersonName(person),
+                getPersonName(
+                    person
+                ),
 
             mobile:
-                getPersonMobile(person),
+                getPersonMobile(
+                    person
+                ),
 
-            type:
-                type,
+            type,
 
-            stage:
-                stage || "",
+            stage,
 
-            message:
-                message || ""
-
+            message
         };
 
 
-        const response =
-            await API.post(
-                "markCommunicationSent",
-                payload
-            );
+        try {
 
-
-        if(!response.success){
-
-            throw new Error(
-                response.message ||
-                "Unable to mark communication as sent"
-            );
-
-        }
-
-
-        /*
-            Update local state immediately.
-        */
-
-        if(type === "PUBLICITY"){
-
-            person.publicityStatus =
-                "SENT";
-
-            person.PublicityStatus =
-                "SENT";
-
-            person.sentAt =
-                new Date().toISOString();
-
-            renderPublicityAudience();
-
-        }
-
-
-        if(type === "REMINDER"){
-
-            person.reminderStatus =
-                "SENT";
-
-            person.ReminderStatus =
-                "SENT";
-
-            person.sentAt =
-                new Date().toISOString();
-
-            renderParticipants();
-
-        }
-
-
-        return true;
-
-    }
-    catch(err){
-
-        console.error(
-            "markCommunicationSent:",
-            err
-        );
-
-
-        alert(
-            "The message was sent/opened, but the " +
-            "communication record could not be saved.\n\n" +
-            err.message
-        );
-
-
-        return false;
-
-    }
-
-}
-
-
-/* =========================================================
-   SELECT ALL PUBLICITY
-========================================================= */
-
-function toggleAllPublicity(
-    checkbox
-){
-
-    document
-        .querySelectorAll(
-            ".publicityCheck:not(:disabled)"
-        )
-        .forEach(
-            cb =>
-                cb.checked =
-                    checkbox.checked
-        );
-
-}
-
-
-/* =========================================================
-   SELECT ALL REMINDERS
-========================================================= */
-
-function toggleAllReminder(
-    checkbox
-){
-
-    document
-        .querySelectorAll(
-            ".personCheck:not(:disabled)"
-        )
-        .forEach(
-            cb =>
-                cb.checked =
-                    checkbox.checked
-        );
-
-}
-
-
-/* =========================================================
-   FILE SELECTION
-========================================================= */
-
-document
-    .getElementById(
-        "ccpublicityAttachment"
-    )
-    .addEventListener(
-        "change",
-        function(){
-
-            const file =
-                this.files[0];
-
-
-            const name =
-                document.getElementById(
-                    "attachmentName"
+            const response =
+                await API.post(
+                    "markCommunicationSent",
+                    payload
                 );
 
 
-            const image =
-                document.getElementById(
-                    "posterPreview"
+            if (
+                !response ||
+                !response.success
+            ) {
+
+                throw new Error(
+                    response?.message ||
+                    "Unable to mark communication as sent."
                 );
-
-
-            const pdf =
-                document.getElementById(
-                    "pdfPreview"
-                );
-
-
-            image.style.display =
-                "none";
-
-
-            pdf.style.display =
-                "none";
-
-
-            image.src =
-                "";
-
-
-            if(!file){
-
-                name.textContent =
-                    "";
-
-                return;
-
             }
 
 
-            name.textContent =
-                `Selected: ${file.name}`;
+            /*
+             * Update local state immediately.
+             */
+            if (
+                type === "PUBLICITY"
+            ) {
+
+                person.publicityStatus =
+                    "SENT";
+
+                renderPublicityAudience();
+
+            } else if (
+                type === "REMINDER"
+            ) {
+
+                person.reminderStatus =
+                    "SENT";
+
+                renderParticipants();
+            }
 
 
-            if(
-                file.type.startsWith(
-                    "image/"
-                )
-            ){
+        } catch (error) {
 
-                const reader =
-                    new FileReader();
+            console.error(
+                "markCommunicationSent:",
+                error
+            );
 
-
-                reader.onload =
-                    function(e){
-
-                        image.src =
-                            e.target.result;
+            alert(
+                error.message ||
+                "Unable to update communication status."
+            );
+        }
+    }
 
 
-                        image.style.display =
-                            "block";
+    /* =========================================================
+       TOGGLE ALL
+    ========================================================= */
 
-                    };
+    function toggleAllPublicity(
+        checked
+    ) {
+
+        document
+            .querySelectorAll(
+                ".cc-publicity-check:not(:disabled)"
+            )
+            .forEach(
+                checkbox => {
+                    checkbox.checked =
+                        checked;
+                }
+            );
+    }
 
 
-                reader.readAsDataURL(
+    function toggleAllReminder(
+        checked
+    ) {
+
+        document
+            .querySelectorAll(
+                ".cc-reminder-check:not(:disabled)"
+            )
+            .forEach(
+                checkbox => {
+                    checkbox.checked =
+                        checked;
+                }
+            );
+    }
+
+
+    /* =========================================================
+       FILE ATTACHMENT
+    ========================================================= */
+
+    function initialiseAttachmentListener() {
+
+        const attachment =
+            document.getElementById(
+                "ccpublicityAttachment"
+            );
+
+
+        if (!attachment) {
+            return;
+        }
+
+
+        attachment.addEventListener(
+            "change",
+            function () {
+
+                const file =
+                    this.files?.[0];
+
+
+                const name =
+                    document.getElementById(
+                        "ccPublicityAttachmentName"
+                    );
+
+
+                if (name) {
+
+                    name.textContent =
+                        file
+                            ? file.name
+                            : "";
+                }
+
+
+                publicityConfig.attachmentName =
                     file
-                );
-
+                        ? file.name
+                        : "";
             }
+        );
+    }
 
 
-            else if(
-                file.type ===
-                "application/pdf"
-            ){
+    /* =========================================================
+       HELPERS
+    ========================================================= */
 
-                pdf.style.display =
-                    "block";
+    function personaliseMessage(
+        message,
+        person
+    ) {
 
-            }
-
+        if (!message) {
+            return "";
         }
-    );
 
 
-/* =========================================================
-   PERSONALISED MESSAGE
-========================================================= */
-
-function personaliseMessage(
-    message,
-    person
-){
-
-    const name =
-        getPersonName(person);
+        const name =
+            getPersonName(
+                person
+            );
 
 
-    return String(
-        message || ""
-    )
-    .replace(
-        /\{name\}/gi,
-        name
-    );
-
-}
+        return String(
+            message
+        ).replace(
+            /\{name\}/gi,
+            name
+        );
+    }
 
 
-/* =========================================================
-   PERSON HELPERS
-========================================================= */
+    function getPersonName(
+        person
+    ) {
 
-function getPersonName(person){
-
-    return String(
-        person?.name ||
-        person?.Name ||
-        person?.personName ||
-        person?.PersonName ||
-        ""
-    ).trim();
-
-}
+        return (
+            person?.name ||
+            person?.Name ||
+            person?.fullName ||
+            person?.fullName ||
+            ""
+        );
+    }
 
 
-function getPersonMobile(person){
+    function getPersonMobile(
+        person
+    ) {
 
-    return String(
-        person?.mobile ||
-        person?.Mobile ||
-        person?.phone ||
-        person?.Phone ||
-        ""
-    ).trim();
-
-}
-
-
-function getPersonId(person){
-
-    return String(
-        person?.personId ||
-        person?.PersonID ||
-        person?.personID ||
-        getPersonMobile(person) ||
-        person?.email ||
-        person?.Email ||
-        getPersonName(person) ||
-        ""
-    ).trim();
-
-}
+        return (
+            person?.mobile ||
+            person?.Mobile ||
+            person?.phone ||
+            person?.Phone ||
+            ""
+        );
+    }
 
 
-function normalisePhone(
-    phone
-){
+    function getPersonId(
+        person
+    ) {
 
-    return String(
-        phone || ""
-    )
-    .replace(
-        /\D/g,
-        ""
-    );
-
-}
-
-
-/* =========================================================
-   DEDUPLICATE PEOPLE
-========================================================= */
-
-function deduplicatePeople(
-    people
-){
-
-    const unique =
-        new Map();
+        return (
+            person?.personId ||
+            person?.id ||
+            person?.ID ||
+            person?.mobile ||
+            person?.Mobile ||
+            ""
+        );
+    }
 
 
-    people.forEach(
-        person => {
+    function normalisePhone(
+        mobile
+    ) {
 
-            const key =
-                String(
-                    getPersonId(person)
-                )
-                .trim()
-                .toLowerCase();
-
-
-            if(
-                key &&
-                !unique.has(key)
-            ){
-
-                unique.set(
-                    key,
-                    person
-                );
-
-            }
-
-        }
-    );
+        return String(
+            mobile || ""
+        ).replace(
+            /\D/g,
+            ""
+        );
+    }
 
 
-    return Array.from(
-        unique.values()
-    );
+    function deduplicatePeople(
+        people
+    ) {
 
-}
+        const map =
+            new Map();
 
 
-/* =========================================================
-   SORT
-========================================================= */
+        people.forEach(
+            person => {
 
-function sortByName(
-    a,
-    b
-){
+                const key =
+                    getPersonId(
+                        person
+                    ) ||
+                    getPersonMobile(
+                        person
+                    ) ||
+                    getPersonName(
+                        person
+                    );
 
-    return getPersonName(a)
-        .localeCompare(
-            getPersonName(b),
-            undefined,
-            {
-                sensitivity:
-                    "base"
+
+                if (!map.has(key)) {
+
+                    map.set(
+                        key,
+                        person
+                    );
+                }
             }
         );
 
-}
+
+        return Array.from(
+            map.values()
+        );
+    }
 
 
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
+    function sortByName(
+        people
+    ) {
 
-function escapeHtml(
-    value
-){
+        people.sort(
+            (a, b) =>
+                getPersonName(a)
+                    .localeCompare(
+                        getPersonName(b)
+                    )
+        );
+    }
 
-    return String(
-        value ?? ""
-    )
-    .replace(
-        /&/g,
-        "&amp;"
-    )
-    .replace(
-        /</g,
-        "&lt;"
-    )
-    .replace(
-        />/g,
-        "&gt;"
-    )
-    .replace(
-        /"/g,
-        "&quot;"
-    )
-    .replace(
-        /'/g,
-        "&#039;"
-    );
 
-}
-return {
+    function getEventName(
+        event
+    ) {
+
+        return (
+            event?.eventName ||
+            event?.name ||
+            event?.Name ||
+            ""
+        );
+    }
+
+
+    function getEventDate(
+        event
+    ) {
+
+        return (
+            event?.eventDate ||
+            event?.date ||
+            event?.Date ||
+            ""
+        );
+    }
+
+
+    function escapeHtml(
+        value
+    ) {
+
+        return String(
+            value ?? ""
+        )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+    }
+
+
+    /* =========================================================
+       INITIALISE
+    ========================================================= */
+
+    initialiseAttachmentListener();
+
+
+    /* =========================================================
+       PUBLIC API
+    ========================================================= */
+
+    return {
+
         cinit,
+
         loadEvents,
         selectEvent,
         selectActivity,
@@ -9298,6 +8136,7 @@ return {
 
         toggleAllPublicity,
         toggleAllReminder
+
     };
 
 })();
