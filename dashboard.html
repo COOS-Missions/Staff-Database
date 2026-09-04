@@ -6237,14 +6237,19 @@ window.CommunicationsCentre = (() => {
     }
 );
 
-        if(!response.success){
+        if (!response.success) {
 
-            throw new Error(
-                response.message ||
-                "Unable to load publicity audience"
-            );
+    console.error(
+        "BACKEND ERROR:",
+        response.message
+    );
 
-        }
+    throw new Error(
+        response.message ||
+        "Unable to load publicity audience"
+    );
+
+}
 
 
         publicityAudience =
@@ -6259,12 +6264,30 @@ window.CommunicationsCentre = (() => {
 
         renderPublicityAudience();
 
-    } catch (error) {
-            console.error(error);
-            const table = document.getElementById("ccPublicityTable");
-            if (table) table.innerHTML = `<tr><td colspan="6">Unable to load publicity audience.</td></tr>`;
-        }
+   } catch (error) {
+
+    console.error(
+        "loadPublicityAudience ERROR:",
+        error
+    );
+
+    const table =
+        document.getElementById(
+            "ccPublicityTable"
+        );
+
+    if (table) {
+
+        table.innerHTML =
+            `<tr>
+                <td colspan="6">
+                    Unable to load publicity audience.
+                </td>
+            </tr>`;
+
     }
+
+}
 
     function renderPublicityAudience() {
         const table = document.getElementById("ccPublicityTable");
