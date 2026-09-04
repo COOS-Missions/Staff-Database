@@ -833,62 +833,138 @@
    REMINDER AREA
    ========================================== */
 
-/* Reminder text */
-.cc-reminder,
-.cc-reminder label,
-.cc-reminder p,
-.cc-reminder span,
-.cc-reminder td,
-.cc-reminder th,
-.cc-reminder h3,
-.cc-reminder h4 {
+/* =====================================================
+   REMINDER MODULE - TEXT
+   ===================================================== */
+
+#ccReminderModule,
+#ccReminderModule .cc-card,
+#ccReminderModule .cc-section-title,
+#ccReminderModule .cc-event-title,
+#ccReminderModule label,
+#ccReminderModule .cc-notice,
+#ccReminderModule .cc-stat,
+#ccReminderModule .cc-stat-number,
+#ccReminderModule .cc-stat-label,
+#ccReminderModule .cc-table,
+#ccReminderModule .cc-table th,
+#ccReminderModule .cc-table td {
     color: #000 !important;
 }
 
 
-/* Reminder status */
-.cc-reminder-status {
+/* Form fields */
+
+#ccReminderModule input,
+#ccReminderModule select,
+#ccReminderModule textarea {
     color: #000 !important;
-    font-weight: 600;
 }
 
 
-/* Reminder action buttons */
-.cc-reminder-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+/* Placeholder text */
+
+#ccReminderModule input::placeholder,
+#ccReminderModule textarea::placeholder {
+    color: #666 !important;
 }
 
 
-/* Preview */
-.cc-reminder-preview {
-    background: #0d6efd;
-    color: #fff !important;
-    border: none;
-}
+/* =====================================================
+   REMINDER BUTTONS
+   ===================================================== */
 
-.cc-reminder-preview:hover {
-    background: #0b5ed7;
+/* All reminder buttons */
+
+#ccReminderModule button {
     color: #fff !important;
 }
 
 
-/* Send */
-.cc-reminder-send {
+/* Save Configuration */
+
+#ccReminderModule .cc-success {
     background: #198754;
     color: #fff !important;
     border: none;
 }
 
-.cc-reminder-send:hover {
+#ccReminderModule .cc-success:hover {
     background: #157347;
-    color: #fff !important;
 }
 
 
-/* Disabled buttons */
-.cc-reminder button:disabled {
+/* Preview */
+
+#ccReminderModule .cc-preview {
+    background: #0d6efd;
+    color: #fff !important;
+    border: none;
+}
+
+#ccReminderModule .cc-preview:hover {
+    background: #0b5ed7;
+}
+
+
+/* WhatsApp / Send Selected */
+
+#ccReminderModule .cc-whatsapp {
+    background: #198754;
+    color: #fff !important;
+    border: none;
+}
+
+#ccReminderModule .cc-whatsapp:hover {
+    background: #157347;
+}
+
+
+/* Refresh */
+
+#ccReminderModule .cc-secondary {
+    background: #6c757d;
+    color: #fff !important;
+    border: none;
+}
+
+#ccReminderModule .cc-secondary:hover {
+    background: #5c636a;
+}
+
+
+/* =====================================================
+   TABLE ACTION BUTTONS
+   ===================================================== */
+
+#ccReminderModule .cc-table button {
+    color: #fff !important;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+
+/* Preview inside participant table */
+
+#ccReminderModule .cc-table button:first-child {
+    background: #0d6efd;
+}
+
+
+/* WhatsApp inside participant table */
+
+#ccReminderModule .cc-table button + button {
+    background: #198754;
+}
+
+
+/* =====================================================
+   DISABLED BUTTON
+   ===================================================== */
+
+#ccReminderModule button:disabled {
     opacity: 0.55;
     cursor: not-allowed;
 }
