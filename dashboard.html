@@ -969,9 +969,9 @@
     cursor: not-allowed;
 }
 
-    #ccReminderModule .cc-table tbody td:nth-child(4) {
-    color: #000 !important;
-    font-weight: 600;
+    #ccReminderModule .cc-reminder-status {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
 
   </style>
@@ -6320,6 +6320,7 @@ window.CommunicationsCentre = (() => {
                 </div>
                 <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
                     <strong>⏰ Reminder</strong>
+                    
                     <span class="badge ${reminder.available ? "badge-green" : "badge-yellow"}">
                         ${reminder.available ? "AVAILABLE" : "NOT YET AVAILABLE"}
                     </span>
@@ -6806,7 +6807,12 @@ window.CommunicationsCentre = (() => {
                     <td><input type="checkbox" class="cc-reminder-check" value="${index}" ${status === "SENT" ? "disabled" : ""}></td>
                     <td>${escapeHtml(getPersonName(p))}</td>
                     <td>${escapeHtml(getPersonMobile(p))}</td>
-                    <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
+                    <td>
+    <span
+        class="badge ${statusClass} cc-reminder-status">
+        ${escapeHtml(status)}
+    </span>
+</td>
                     <td>
                         <button type="button" onclick="CommunicationsCentre.previewReminder(${index})">Preview</button>
                         ${status !== "SENT" ? `<button type="button" onclick="CommunicationsCentre.openManualReminderWhatsApp(${index})">WhatsApp</button>` : ""}
