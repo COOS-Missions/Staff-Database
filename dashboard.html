@@ -6228,15 +6228,14 @@ window.CommunicationsCentre = (() => {
 
         try{
 
-        const response =
-            await API.post(
-                "getPublicityAudience",
-                {
-                    spreadsheetId:
-                        selectedEvent.spreadsheetId
-                }
-            );
-
+       const response = await API.post(
+    "getPublicityAudience",
+    {
+        data: JSON.stringify({
+            spreadsheetId: selectedEvent.spreadsheetId
+        })
+    }
+);
 
         if(!response.success){
 
