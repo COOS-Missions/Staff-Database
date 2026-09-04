@@ -6229,6 +6229,14 @@ window.CommunicationsCentre = (() => {
 
     try {
 
+        console.log(
+            "PUBLICITY REQUEST:",
+            {
+                action: "getPublicityAudience",
+                spreadsheetId: selectedEvent.spreadsheetId
+            }
+        );
+
         const response = await API.post(
             "getPublicityAudience",
             {
