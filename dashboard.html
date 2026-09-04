@@ -8461,14 +8461,31 @@ window.CommunicationsCentre = (() => {
 
 async function importSheet() {
 
-    const url = document.getElementById("sheetUrl").value;
-    const eventDate = document.getElementById("importEventDate").value;
-    const eventType = document.getElementById("importEventType").value;
-    const eventName = document.getElementById("importEventName").value;
+    console.log("===== IMPORT BUTTON CLICKED =====");
 
-    const user = JSON.parse(
-        localStorage.getItem("mp_user")
-    );
+    const url =
+        document.getElementById("sheetUrl").value;
+
+    const eventDate =
+        document.getElementById("importEventDate").value;
+
+    const eventType =
+        document.getElementById("importEventType").value;
+
+    const eventName =
+        document.getElementById("importEventName").value;
+
+    console.log("URL:", url);
+    console.log("Event Date:", eventDate);
+    console.log("Event Type:", eventType);
+    console.log("Event Name:", eventName);
+
+    const user =
+        JSON.parse(
+            localStorage.getItem("mp_user")
+        );
+
+    console.log("User:", user);
 
     if (!url || !eventDate || !eventName) {
 
@@ -8481,10 +8498,11 @@ async function importSheet() {
 
         let result;
 
-        // =====================================
-        // SHORT TERM MISSION TRIP
-        // =====================================
         if (eventType === "MISSION") {
+
+            console.log(
+                ">>> CALLING importMissionTripSheet"
+            );
 
             result = await API.post(
                 "importMissionTripSheet",
@@ -8496,12 +8514,11 @@ async function importSheet() {
                 }
             );
 
-        }
+        } else {
 
-        // =====================================
-        // GENERAL EVENTS
-        // =====================================
-        else {
+            console.log(
+                ">>> CALLING importExternalSheet"
+            );
 
             result = await API.post(
                 "importExternalSheet",
@@ -8516,7 +8533,10 @@ async function importSheet() {
 
         }
 
-        console.log(result);
+        console.log(
+            ">>> IMPORT RESULT:",
+            result
+        );
 
         if (result.success) {
 
@@ -8528,17 +8548,21 @@ async function importSheet() {
 
         }
 
-    }
-    catch (err) {
+    } catch (err) {
 
-        console.error("IMPORT ERROR:", err);
+        console.error(
+            ">>> IMPORT ERROR:",
+            err
+        );
 
-        alert(err.message || "Server error");
+        alert(
+            err.message ||
+            "Server error"
+        );
 
     }
 
 }
-
   
 
 /* ==========================================================
