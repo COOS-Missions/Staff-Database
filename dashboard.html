@@ -791,6 +791,44 @@
 
 }
 
+    .cc-registration-status,
+.cc-publicity-status {
+    color: #000 !important;
+}
+
+    .cc-publicity-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cc-publicity-actions button {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cc-publicity-preview {
+    background: #e8f1ff;
+    color: #1d4ed8;
+}
+
+.cc-publicity-preview:hover {
+    background: #dbeafe;
+}
+
+.cc-publicity-whatsapp {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.cc-publicity-whatsapp:hover {
+    background: #bbf7d0;
+}
+
   </style>
 
 </head>
@@ -6344,12 +6382,38 @@ window.CommunicationsCentre = (() => {
                     <td><input type="checkbox" class="cc-publicity-check" value="${index}" ${status === "SENT" ? "disabled" : ""}></td>
                     <td>${escapeHtml(getPersonName(p))}</td>
                     <td>${escapeHtml(getPersonMobile(p))}</td>
-                    <td><span class="badge badge-blue">${escapeHtml(engagement)}</span></td>
-                    <td><span class="badge ${statusClass}">${escapeHtml(status)}</span></td>
-                    <td>
-                        <button type="button" onclick="CommunicationsCentre.previewPublicityPerson(${index})">Preview</button>
-                        ${status !== "SENT" ? `<button type="button" onclick="CommunicationsCentre.openManualPublicityWhatsApp(${index})">WhatsApp</button>` : ""}
-                    </td>
+                   <td>
+    <span class="cc-registration-status">
+        ${escapeHtml(engagement)}
+    </span>
+</td>
+
+<td>
+    <span class="cc-publicity-status ${statusClass}">
+        ${escapeHtml(status)}
+    </span>
+</td>
+                   <td>
+    <div class="cc-publicity-actions">
+
+        <button
+            type="button"
+            class="cc-publicity-preview"
+            onclick="CommunicationsCentre.previewPublicityPerson(${index})">
+            Preview
+        </button>
+
+        ${status !== "SENT" ? `
+            <button
+                type="button"
+                class="cc-publicity-whatsapp"
+                onclick="CommunicationsCentre.openManualPublicityWhatsApp(${index})">
+                WhatsApp
+            </button>
+        ` : ""}
+
+    </div>
+</td>
                 </tr>
             `;
         }).join("");
