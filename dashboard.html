@@ -8779,52 +8779,19 @@ async function importSheet() {
 
 /* ==========================================================
 MISSIONS INTELLIGENCE CENTRE
-CLEAN EMBEDDED VERSION FOR dashboard.html
-
----
+CURRENT DASHBOARD.HTML VERSION
 
 ## PURPOSE
 
-This script is designed to live inside dashboard.html.
-
-It DOES NOT automatically call the API on page load.
-
-Start with:
-
-
-   initIntelligenceCenter();
-
-
-The dashboard navigation should call that when the
-Intelligence section is opened.
-
----
-
-## PRIMARY API
-
-
-   API.post("getMissionDashboard", filters)
-
-
-Participant journey:
-
-
-   API.post(
-       "getParticipantDetails",
-       { identifier }
-   )
-
-
-Participant search:
-
-
-   API.post(
-       "searchParticipant",
-       { searchTerm }
-   )
-
-
-========================================================== */
+* One API call for dashboard data
+* No charts
+* Event Top Lines
+* Mission Trip Summary by Location
+* Participant Directory
+* Participant search
+* Participant journey
+* Global filtering
+  ========================================================== */
 
 /* ==========================================================
 STATE
@@ -8832,14 +8799,10 @@ STATE
 
 const Dashboard = {
 
-
+```
 data: null,
 
 missionData: null,
-
-serverFilters: {},
-
-rawData: [],
 
 filteredParticipants: [],
 
@@ -8850,10 +8813,12 @@ filteredMissionTrips: [],
 filters: {
 
     year: "",
-
-    startDate: "",
-
-    endDate: ""
+    church: "",
+    leadership: "",
+    status: "",
+    eventType: "",
+    event: "",
+    participant: ""
 
 },
 
@@ -8861,10 +8826,8 @@ initialised: false,
 
 loading: false,
 
-uiBound: false,
-
-filtersBound: false
-
+uiBound: false
+```
 
 };
 
@@ -8873,18 +8836,14 @@ console.log(
 );
 
 /* ==========================================================
-INITIALISE
+INIT
 ========================================================== */
 
-async function initIntelligenceCenter(
-force = false
-) {
+async function initIntelligenceCenter(force = false) {
 
-
+```
 const section =
-    document.getElementById(
-        "intelligence"
-    );
+    document.getElementById("intelligence");
 
 
 if (!section) {
@@ -8903,6 +8862,10 @@ if (
     !force
 ) {
 
+    console.log(
+        "Missions Intelligence Centre already loaded."
+    );
+
     return;
 
 }
@@ -8918,32 +8881,20 @@ if (Dashboard.loading) {
 Dashboard.loading = true;
 
 
+showIntelligenceLoading(
+    true,
+    force
+        ? "Refreshing Mission Intelligence..."
+        : "Loading Mission Intelligence..."
+);
+
+
+clearIntelligenceError();
+
+
 try {
 
-    showIntelligenceLoading(
-        true,
-        force
-            ? "Refreshing Mission Intelligence..."
-            : "Loading Mission Intelligence..."
-    );
-
-
-    clearIntelligenceError();
-
-
     await loadDashboard();
-
-
-    Dashboard.filteredParticipants =
-        getParticipantRows();
-
-
-    Dashboard.filteredEventTopLines =
-        getEventTopLineRows();
-
-
-    Dashboard.filteredMissionTrips =
-        getMissionTripRows();
 
 
     initialiseFilters();
@@ -8952,14 +8903,13 @@ try {
     bindDashboardUI();
 
 
-    renderDashboard();
+    applyDashboardFilters();
 
 
     updateLastRefresh();
 
 
-    Dashboard.initialised =
-        true;
+    Dashboard.initialised = true;
 
 
     console.log(
@@ -8971,13 +8921,13 @@ try {
 catch (error) {
 
     console.error(
-        "INTELLIGENCE INITIALISATION ERROR:",
+        "INTELLIGENCE CENTRE ERROR:",
         error
     );
 
 
     showIntelligenceError(
-        error?.message ||
+        error.message ||
         "Unable to load Mission Intelligence."
     );
 
@@ -8992,7 +8942,7 @@ finally {
     );
 
 }
-
+```
 
 }
 
@@ -9002,20 +8952,16 @@ LOAD DASHBOARD
 
 async function loadDashboard() {
 
-
+```
 console.log(
     "=== INTELLIGENCE API START ==="
 );
 
 
-/*
-   ONE dashboard API request only.
-*/
-
 const result =
     await API.post(
         "getMissionDashboard",
-        Dashboard.filters
+        {}
     );
 
 
@@ -9044,16 +8990,19 @@ if (
 
 
 const payload =
-    result.data || {};
-
-
-Dashboard.serverFilters =
-    payload.filters || {};
+    result.data ||
+    {};
 
 
 Dashboard.data =
     payload.dashboard ||
     payload;
+
+
+Dashboard.missionData =
+    payload.missionData ||
+    Dashboard.data?.missionTrips ||
+    {};
 
 
 if (!Dashboard.data) {
@@ -9065,40 +9014,9 @@ if (!Dashboard.data) {
 }
 
 
-/*
-   Mission data can be returned separately
-   or inside dashboard.missionTrips.
-*/
-
-Dashboard.missionData =
-    payload.missionData ||
-    Dashboard.data.missionTrips ||
-    null;
-
-
-Dashboard.rawData =
-    Dashboard.data.rawData ||
-    Dashboard.data.rows ||
-    payload.rawData ||
-    [];
-
-
-if (!Array.isArray(Dashboard.rawData)) {
-
-    Dashboard.rawData = [];
-
-}
-
-
 console.log(
     "MISSION DATA:",
     Dashboard.missionData
-);
-
-
-console.log(
-    "MISSION TRIPS OBJECT:",
-    Dashboard.data?.missionTrips
 );
 
 
@@ -9109,10 +9027,22 @@ console.log(
 
 
 console.log(
-    "RAW DATA ROWS:",
-    Dashboard.rawData.length
+    "PARTICIPANTS:",
+    Dashboard.data?.tables?.participantSummary?.length || 0
 );
 
+
+console.log(
+    "EVENT TOP LINES:",
+    Dashboard.data?.tables?.eventTopLines?.length || 0
+);
+
+
+console.log(
+    "MISSION TRIP DATA:",
+    Dashboard.data?.missionTrips
+);
+```
 
 }
 
@@ -9122,13 +9052,13 @@ REFRESH
 
 async function refreshDashboard() {
 
-
+```
 Dashboard.initialised = false;
 
 await initIntelligenceCenter(
     true
 );
-
+```
 
 }
 
@@ -9139,279 +9069,800 @@ window.refreshIntelligenceCenter =
 refreshDashboard;
 
 /* ==========================================================
-MAIN RENDER
+GET PARTICIPANTS
 ========================================================== */
 
-function renderDashboard() {
+function getParticipantRows() {
+
+```
+const rows =
+    Dashboard.data
+        ?.tables
+        ?.participantSummary;
 
 
-if (!Dashboard.data)
-    return;
-
-
-renderEventTopLines();
-
-renderMissionTripTopLines();
-
-renderMissionTripSummary();
-
-renderMissionTripLocationSummary();
-
-renderParticipantDirectory();
-
-updateFilterResultCount();
-
+return Array.isArray(rows)
+    ? rows
+    : [];
+```
 
 }
 
 /* ==========================================================
-DATA GETTERS
+GET EVENT TOP LINES
 ========================================================== */
-
-/* ----------------------------------------------------------
-PARTICIPANTS
----------------------------------------------------------- */
-
-function getParticipantRows() {
-
-
-const tables =
-    Dashboard.data?.tables || {};
-
-
-const candidates = [
-
-    tables.participantSummary,
-
-    tables.participants,
-
-    Dashboard.data?.participantSummary,
-
-    Dashboard.data?.participants,
-
-    Dashboard.data?.directory,
-
-    Dashboard.data?.participantDirectory
-
-];
-
-
-for (
-    const rows of candidates
-) {
-
-    if (
-        Array.isArray(rows)
-    ) {
-
-        return rows;
-
-    }
-
-}
-
-
-return [];
-
-
-}
-
-/* ----------------------------------------------------------
-EVENT TOP LINES
----------------------------------------------------------- */
 
 function getEventTopLineRows() {
 
-
-const tables =
-    Dashboard.data?.tables || {};
-
-
-const candidates = [
-
-    tables.eventTopLines,
-
-    Dashboard.data?.eventTopLines,
-
-    Dashboard.data?.events?.topLines
-
-];
+```
+const rows =
+    Dashboard.data
+        ?.tables
+        ?.eventTopLines;
 
 
-for (
-    const rows of candidates
-) {
-
-    if (
-        Array.isArray(rows)
-    ) {
-
-        return rows;
-
-    }
+return Array.isArray(rows)
+    ? rows
+    : [];
+```
 
 }
 
-
-return [];
-
-
-}
-
-/* ----------------------------------------------------------
-MISSION TRIPS
-
-Supports the different response structures that have
-appeared in the Mission Intelligence backend.
----------------------------------------------------------- */
+/* ==========================================================
+GET MISSION TRIPS
+========================================================== */
 
 function getMissionTripRows() {
 
+```
+const mission =
+    Dashboard.data?.missionTrips ||
+    Dashboard.missionData ||
+    {};
 
-const candidates = [
 
-    /*
-       Direct mission data
-    */
+const summary =
+    mission.summary ||
+    {};
 
-    Dashboard.missionData?.trips,
 
-    Dashboard.missionData?.tripSummary,
+const data =
+    summary.data ||
+    summary;
 
-    /*
-       missionData.summary
-    */
 
-    Dashboard.missionData?.summary?.trips,
+const rows =
+    data.trips ||
+    data.tripSummary ||
+    data.missionTrips ||
+    [];
 
-    Dashboard.missionData?.summary?.tripSummary,
 
-    Dashboard.missionData?.summary?.data?.trips,
+return Array.isArray(rows)
+    ? rows
+    : [];
+```
 
-    Dashboard.missionData?.summary?.data?.tripSummary,
+}
 
-    /*
-       dashboard.missionTrips
-    */
+/* ==========================================================
+KPI
+========================================================== */
 
-    Dashboard.data?.missionTrips?.trips,
+function renderKPIs() {
 
-    Dashboard.data?.missionTrips?.tripSummary,
+```
+const k =
+    Dashboard.data?.kpis ||
+    {};
 
-    Dashboard.data?.missionTrips?.summary?.trips,
 
-    Dashboard.data?.missionTrips?.summary?.tripSummary,
+setText(
+    "kpiRegistrations",
+    formatNumber(
+        k.registrations
+    )
+);
 
-    Dashboard.data?.missionTrips?.summary?.data?.trips,
 
-    Dashboard.data?.missionTrips?.summary?.data?.tripSummary
+setText(
+    "kpiParticipants",
+    formatNumber(
+        k.uniqueParticipants
+    )
+);
+
+
+setText(
+    "kpiReturning",
+    formatNumber(
+        k.repeatParticipants
+    )
+);
+
+
+setText(
+    "kpiFirstTimers",
+    formatNumber(
+        k.firstTimers
+    )
+);
+
+
+setText(
+    "kpiEvents",
+    formatNumber(
+        k.totalEvents
+    )
+);
+
+
+setText(
+    "kpiChurches",
+    formatNumber(
+        k.totalChurches
+    )
+);
+
+
+setText(
+    "kpiAttendance",
+    `${Number(
+        k.attendanceRate || 0
+    )}%`
+);
+
+
+const average =
+    Dashboard.data
+        ?.averages
+        ?.average ||
+    0;
+
+
+setText(
+    "kpiAverageEvent",
+    formatNumber(
+        average
+    )
+);
+
+
+const mission =
+    Dashboard.data
+        ?.missionTrips
+        ?.summary
+        ?.data ||
+    Dashboard.data
+        ?.missionTrips
+        ?.summary ||
+    {};
+
+
+setText(
+    "kpiMissionTrips",
+    formatNumber(
+        mission.totalTrips
+    )
+);
+
+
+setText(
+    "kpiTrippers",
+    formatNumber(
+        mission.uniqueMissionaries
+    )
+);
+
+
+setText(
+    "kpiAvgTeam",
+    formatNumber(
+        mission.averageParticipants
+    )
+);
+```
+
+}
+
+/* ==========================================================
+FILTER INITIALISATION
+========================================================== */
+
+function initialiseFilters() {
+
+```
+const participants =
+    getParticipantRows();
+
+
+const events =
+    getEventTopLineRows();
+
+
+populateSelect(
+    "filterChurch",
+    uniqueValues(
+        participants,
+        "church"
+    ),
+    "All Churches"
+);
+
+
+populateSelect(
+    "filterLeadership",
+    uniqueValues(
+        participants,
+        "leadership"
+    ),
+    "All"
+);
+
+
+populateSelect(
+    "filterStatus",
+    uniqueValues(
+        participants,
+        "status"
+    ),
+    "All Statuses"
+);
+
+
+populateSelect(
+    "filterEventType",
+    uniqueValues(
+        events,
+        "eventType",
+        "type"
+    ),
+    "All Event Types"
+);
+
+
+populateSelect(
+    "filterEvent",
+    uniqueValues(
+        events,
+        "event",
+        "eventName"
+    ),
+    "All Events"
+);
+
+
+const years =
+    uniqueYears(
+        events
+    );
+
+
+populateSelect(
+    "filterYear",
+    years,
+    "All Years"
+);
+```
+
+}
+
+/* ==========================================================
+POPULATE SELECT
+========================================================== */
+
+function populateSelect(
+id,
+values,
+defaultText
+) {
+
+```
+const select =
+    document.getElementById(id);
+
+
+if (!select)
+    return;
+
+
+const current =
+    select.value;
+
+
+select.innerHTML = "";
+
+
+const defaultOption =
+    document.createElement(
+        "option"
+    );
+
+
+defaultOption.value =
+    "";
+
+
+defaultOption.textContent =
+    defaultText;
+
+
+select.appendChild(
+    defaultOption
+);
+
+
+(values || [])
+    .filter(
+        value =>
+            value !== null &&
+            value !== undefined &&
+            String(value).trim() !== ""
+    )
+    .sort(
+        (a, b) =>
+            String(a).localeCompare(
+                String(b),
+                undefined,
+                {
+                    numeric: true,
+                    sensitivity: "base"
+                }
+            )
+    )
+    .forEach(
+        value => {
+
+            const option =
+                document.createElement(
+                    "option"
+                );
+
+
+            option.value =
+                String(value);
+
+
+            option.textContent =
+                String(value);
+
+
+            select.appendChild(
+                option
+            );
+
+        }
+    );
+
+
+if (
+    current &&
+    [...select.options]
+        .some(
+            option =>
+                option.value === current
+        )
+) {
+
+    select.value =
+        current;
+
+}
+```
+
+}
+
+/* ==========================================================
+UNIQUE VALUES
+========================================================== */
+
+function uniqueValues(
+rows,
+...fields
+) {
+
+```
+const values = [];
+
+
+(rows || []).forEach(
+    row => {
+
+        for (
+            const field of fields
+        ) {
+
+            const value =
+                row?.[field];
+
+
+            if (
+                value !== undefined &&
+                value !== null &&
+                String(value).trim() !== ""
+            ) {
+
+                values.push(
+                    String(value).trim()
+                );
+
+                break;
+
+            }
+
+        }
+
+    }
+);
+
+
+return [
+    ...new Set(values)
+];
+```
+
+}
+
+/* ==========================================================
+YEARS
+========================================================== */
+
+function uniqueYears(
+rows
+) {
+
+```
+const years = [];
+
+
+(rows || []).forEach(
+    row => {
+
+        const date =
+            row.date ||
+            row.eventDate ||
+            row.startDate;
+
+
+        const year =
+            getYear(date);
+
+
+        if (year)
+            years.push(year);
+
+    }
+);
+
+
+return [
+    ...new Set(years)
+];
+```
+
+}
+
+/* ==========================================================
+BIND UI
+========================================================== */
+
+function bindDashboardUI() {
+
+```
+if (Dashboard.uiBound)
+    return;
+
+
+const filterIds = [
+
+    "filterYear",
+    "filterChurch",
+    "filterLeadership",
+    "filterStatus",
+    "filterEventType",
+    "filterEvent"
 
 ];
 
 
-for (
-    const rows of candidates
-) {
+filterIds.forEach(
+    id => {
 
-    if (
-        Array.isArray(rows)
-    ) {
-
-        return rows;
-
-    }
-
-}
+        const element =
+            document.getElementById(id);
 
 
-return [];
+        if (!element)
+            return;
 
 
-}
-
-/* ----------------------------------------------------------
-MISSION LOCATION SUMMARY
----------------------------------------------------------- */
-
-function getMissionLocationRows() {
-
-
-const candidates = [
-
-    Dashboard.missionData
-        ?.locationSummary,
-
-    Dashboard.missionData
-        ?.missionTripLocationSummary,
-
-    Dashboard.missionData
-        ?.summary
-        ?.locationSummary,
-
-    Dashboard.missionData
-        ?.summary
-        ?.missionTripLocationSummary,
-
-    Dashboard.missionData
-        ?.summary
-        ?.data
-        ?.locationSummary,
-
-    Dashboard.missionData
-        ?.summary
-        ?.data
-        ?.missionTripLocationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.locationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.missionTripLocationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.summary
-        ?.locationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.summary
-        ?.missionTripLocationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.summary
-        ?.data
-        ?.locationSummary,
-
-    Dashboard.data
-        ?.missionTrips
-        ?.summary
-        ?.data
-        ?.missionTripLocationSummary
-
-];
-
-
-for (
-    const rows of candidates
-) {
-
-    if (
-        Array.isArray(rows)
-    ) {
-
-        return rows;
+        element.addEventListener(
+            "change",
+            applyDashboardFilters
+        );
 
     }
+);
+
+
+const participantSearch =
+    document.getElementById(
+        "participantSearch"
+    );
+
+
+if (participantSearch) {
+
+    participantSearch.addEventListener(
+        "input",
+        debounce(
+            applyDashboardFilters,
+            200
+        )
+    );
 
 }
 
 
-return [];
+const tableSearch =
+    document.getElementById(
+        "participantTableSearch"
+    );
 
+
+if (tableSearch) {
+
+    tableSearch.addEventListener(
+        "input",
+        debounce(
+            renderParticipantDirectory,
+            150
+        )
+    );
+
+}
+
+
+const reset =
+    document.getElementById(
+        "resetFilters"
+    );
+
+
+if (reset) {
+
+    reset.addEventListener(
+        "click",
+        resetDashboardFilters
+    );
+
+}
+
+
+Dashboard.uiBound =
+    true;
+```
+
+}
+
+/* ==========================================================
+APPLY FILTERS
+========================================================== */
+
+function applyDashboardFilters() {
+
+```
+Dashboard.filters.year =
+    getValue(
+        "filterYear"
+    );
+
+
+Dashboard.filters.church =
+    getValue(
+        "filterChurch"
+    );
+
+
+Dashboard.filters.leadership =
+    getValue(
+        "filterLeadership"
+    );
+
+
+Dashboard.filters.status =
+    getValue(
+        "filterStatus"
+    );
+
+
+Dashboard.filters.eventType =
+    getValue(
+        "filterEventType"
+    );
+
+
+Dashboard.filters.event =
+    getValue(
+        "filterEvent"
+    );
+
+
+Dashboard.filters.participant =
+    getValue(
+        "participantSearch"
+    ).toLowerCase();
+
+
+const participants =
+    getParticipantRows();
+
+
+const events =
+    getEventTopLineRows();
+
+
+const trips =
+    getMissionTripRows();
+
+
+/*
+   ------------------------------------------------------
+   PARTICIPANTS
+   ------------------------------------------------------
+*/
+
+Dashboard.filteredParticipants =
+    participants.filter(
+        person => {
+
+            if (
+                Dashboard.filters.church &&
+                String(
+                    person.church || ""
+                ) !==
+                Dashboard.filters.church
+            )
+                return false;
+
+
+            if (
+                Dashboard.filters.leadership &&
+                String(
+                    person.leadership || ""
+                ) !==
+                Dashboard.filters.leadership
+            )
+                return false;
+
+
+            if (
+                Dashboard.filters.status &&
+                String(
+                    person.status || ""
+                ) !==
+                Dashboard.filters.status
+            )
+                return false;
+
+
+            if (
+                Dashboard.filters.participant &&
+                !participantMatchesSearch(
+                    person,
+                    Dashboard.filters.participant
+                )
+            )
+                return false;
+
+
+            return true;
+
+        }
+    );
+
+
+/*
+   ------------------------------------------------------
+   EVENT TOP LINES
+   ------------------------------------------------------
+*/
+
+Dashboard.filteredEventTopLines =
+    events.filter(
+        event => {
+
+            if (
+                Dashboard.filters.year &&
+                getYear(
+                    event.date ||
+                    event.eventDate
+                ) !==
+                Dashboard.filters.year
+            )
+                return false;
+
+
+            if (
+                Dashboard.filters.eventType &&
+                String(
+                    event.eventType ||
+                    event.type ||
+                    ""
+                ) !==
+                Dashboard.filters.eventType
+            )
+                return false;
+
+
+            if (
+                Dashboard.filters.event &&
+                String(
+                    event.event ||
+                    event.eventName ||
+                    ""
+                ) !==
+                Dashboard.filters.event
+            )
+                return false;
+
+
+            return true;
+
+        }
+    );
+
+
+/*
+   ------------------------------------------------------
+   MISSION TRIPS
+   ------------------------------------------------------
+*/
+
+Dashboard.filteredMissionTrips =
+    trips.filter(
+        trip => {
+
+            if (
+                Dashboard.filters.year
+            ) {
+
+                const tripYear =
+                    getYear(
+                        trip.startDate ||
+                        trip.date ||
+                        trip.endDate
+                    );
+
+
+                if (
+                    tripYear &&
+                    tripYear !==
+                    Dashboard.filters.year
+                )
+                    return false;
+
+            }
+
+
+            return true;
+
+        }
+    );
+
+
+/*
+   RENDER
+*/
+
+renderKPIs();
+
+renderEventTopLines();
+
+renderMissionTripLocationSummary();
+
+renderParticipantDirectory();
+```
 
 }
 
@@ -9421,26 +9872,36 @@ EVENT TOP LINES
 
 function renderEventTopLines() {
 
-
+```
 const tbody =
     document.getElementById(
         "eventTopLinesTable"
     );
 
 
-if (!tbody)
+if (!tbody) {
+
+    console.warn(
+        "eventTopLinesTable not found."
+    );
+
     return;
+
+}
 
 
 tbody.innerHTML = "";
 
 
 const rows =
-    Array.isArray(
-        Dashboard.filteredEventTopLines
-    )
-        ? Dashboard.filteredEventTopLines
-        : getEventTopLineRows();
+    Dashboard.filteredEventTopLines ||
+    [];
+
+
+console.log(
+    "Rendering Event Top Lines:",
+    rows
+);
 
 
 if (!rows.length) {
@@ -9457,19 +9918,19 @@ if (!rows.length) {
 
 
 /*
-   Aggregate by Event Type.
+   Group by event type.
 */
 
 const grouped = {};
 
 
 rows.forEach(
-    event => {
+    row => {
 
         const type =
             String(
-                event.eventType ||
-                event.type ||
+                row.eventType ||
+                row.type ||
                 "Unknown"
             ).trim();
 
@@ -9493,341 +9954,74 @@ rows.forEach(
 
 
         grouped[type].registered +=
-            numberValue(
-                event.registered,
-                event.totalRegistered
+            Number(
+                row.registered ||
+                row.totalRegistered ||
+                0
             );
 
 
         grouped[type].attended +=
-            numberValue(
-                event.attended,
-                event.totalAttended
-            );
-
-    }
-);
-
-
-const summary =
-    Object.values(
-        grouped
-    );
-
-
-summary.sort(
-    (a, b) =>
-        a.eventType.localeCompare(
-            b.eventType,
-            undefined,
-            {
-                sensitivity:
-                    "base"
-            }
-        )
-);
-
-
-summary.forEach(
-    item => {
-
-        const tr =
-            document.createElement(
-                "tr"
-            );
-
-
-        tr.innerHTML = `
-
-            <td>
-                ${escapeHtml(
-                    item.eventType
-                )}
-            </td>
-
-            <td>
-                ${formatNumber(
-                    item.registered
-                )}
-            </td>
-
-            <td>
-                ${formatNumber(
-                    item.attended
-                )}
-            </td>
-
-        `;
-
-
-        tbody.appendChild(
-            tr
-        );
-
-    }
-);
-
-
-}
-
-/* ==========================================================
-MISSION TRIP TOP LINES
-========================================================== */
-
-function renderMissionTripTopLines() {
-
-
-const tbody =
-    document.getElementById(
-        "missionTripTopLinesTable"
-    );
-
-
-if (!tbody)
-    return;
-
-
-tbody.innerHTML = "";
-
-
-const trips =
-    Array.isArray(
-        Dashboard.filteredMissionTrips
-    )
-        ? Dashboard.filteredMissionTrips
-        : getMissionTripRows();
-
-
-if (!trips.length) {
-
-    renderEmptyRow(
-        tbody,
-        4,
-        "No mission trip data available."
-    );
-
-    return;
-
-}
-
-
-/*
-   One line per mission trip.
-
-   This deliberately does NOT show percentages,
-   status, New or Inactive.
-*/
-
-trips.forEach(
-    trip => {
-
-        const tr =
-            document.createElement(
-                "tr"
-            );
-
-
-        const name =
-            firstValue(
-                trip.tripName,
-                trip.trip,
-                trip.tripCode,
-                trip.name,
-                "Mission Trip"
-            );
-
-
-        const location =
-            firstValue(
-                trip.location,
-                trip.destination,
-                trip.country,
-                "-"
-            );
-
-
-        const date =
-            firstValue(
-                trip.startDate,
-                trip.date,
-                trip.eventDate,
-                ""
-            );
-
-
-        const participants =
-            firstNumberValue(
-                trip.participantCount,
-                trip.participants,
-                trip.totalParticipants,
-                trip.teamSize,
+            Number(
+                row.attended ||
+                row.totalAttended ||
                 0
             );
 
-
-        tr.innerHTML = `
-
-            <td>
-                ${escapeHtml(
-                    name
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    location
-                )}
-            </td>
-
-            <td>
-                ${formatDate(
-                    date
-                )}
-            </td>
-
-            <td>
-                ${formatNumber(
-                    participants
-                )}
-            </td>
-
-        `;
-
-
-        tbody.appendChild(
-            tr
-        );
-
     }
 );
 
 
-}
-
-/* ==========================================================
-MISSION TRIP SUMMARY
-========================================================== */
-
-function renderMissionTripSummary() {
-
-
-const tbody =
-    document.getElementById(
-        "missionTripSummaryTable"
-    );
-
-
-if (!tbody)
-    return;
-
-
-tbody.innerHTML = "";
-
-
-const trips =
-    Array.isArray(
-        Dashboard.filteredMissionTrips
+Object.values(grouped)
+    .sort(
+        (a, b) =>
+            a.eventType.localeCompare(
+                b.eventType,
+                undefined,
+                {
+                    sensitivity: "base"
+                }
+            )
     )
-        ? Dashboard.filteredMissionTrips
-        : getMissionTripRows();
+    .forEach(
+        row => {
+
+            const tr =
+                document.createElement(
+                    "tr"
+                );
 
 
-if (!trips.length) {
+            tr.innerHTML = `
 
-    renderEmptyRow(
-        tbody,
-        4,
-        "No mission trip data available."
+                <td>
+                    ${escapeHtml(
+                        row.eventType
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        row.registered
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        row.attended
+                    )}
+                </td>
+
+            `;
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        }
     );
-
-    return;
-
-}
-
-
-trips.forEach(
-    trip => {
-
-        const tr =
-            document.createElement(
-                "tr"
-            );
-
-
-        const name =
-            firstValue(
-                trip.tripName,
-                trip.trip,
-                trip.tripCode,
-                trip.name,
-                "-"
-            );
-
-
-        const location =
-            firstValue(
-                trip.location,
-                trip.destination,
-                trip.country,
-                "-"
-            );
-
-
-        const date =
-            firstValue(
-                trip.startDate,
-                trip.date,
-                trip.eventDate,
-                ""
-            );
-
-
-        const participants =
-            firstNumberValue(
-                trip.participantCount,
-                trip.participants,
-                trip.totalParticipants,
-                trip.teamSize,
-                0
-            );
-
-
-        tr.innerHTML = `
-
-            <td>
-                ${escapeHtml(
-                    name
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    location
-                )}
-            </td>
-
-            <td>
-                ${formatDate(
-                    date
-                )}
-            </td>
-
-            <td>
-                ${formatNumber(
-                    participants
-                )}
-            </td>
-
-        `;
-
-
-        tbody.appendChild(
-            tr
-        );
-
-    }
-);
-
+```
 
 }
 
@@ -9837,39 +10031,83 @@ MISSION TRIP LOCATION SUMMARY
 
 function renderMissionTripLocationSummary() {
 
-
+```
 const tbody =
     document.getElementById(
         "missionTripLocationSummaryTable"
     );
 
 
-if (!tbody)
+if (!tbody) {
+
+    console.warn(
+        "missionTripLocationSummaryTable not found."
+    );
+
     return;
+
+}
 
 
 tbody.innerHTML = "";
 
 
 const trips =
-    Array.isArray(
-        Dashboard.filteredMissionTrips
-    )
-        ? Dashboard.filteredMissionTrips
-        : getMissionTripRows();
+    Dashboard.filteredMissionTrips ||
+    [];
+
+
+console.log(
+    "Rendering Mission Trips:",
+    trips
+);
 
 
 /*
-   IMPORTANT:
-
-   Always rebuild this summary from the actual trip
-   rows when trip rows are available.
-
-   This avoids relying on a potentially stale or empty
-   backend locationSummary.
+   First use backend location summary
+   when no filtering is active.
 */
 
-if (trips.length) {
+let locations = [];
+
+
+const mission =
+    Dashboard.data?.missionTrips ||
+    Dashboard.missionData ||
+    {};
+
+
+const summary =
+    mission.summary ||
+    {};
+
+
+const data =
+    summary.data ||
+    summary;
+
+
+if (
+    !hasMissionTripFilter()
+) {
+
+    locations =
+        data.missionTripLocationSummary ||
+        data.locationSummary ||
+        [];
+
+}
+
+
+/*
+   If backend summary is unavailable,
+   rebuild directly from trip rows.
+*/
+
+if (
+    !Array.isArray(locations) ||
+    !locations.length
+) {
 
     const grouped = {};
 
@@ -9879,12 +10117,9 @@ if (trips.length) {
 
             const location =
                 String(
-                    firstValue(
-                        trip.location,
-                        trip.destination,
-                        trip.country,
-                        "Unknown"
-                    )
+                    trip.location ||
+                    trip.destination ||
+                    "Unknown"
                 ).trim();
 
 
@@ -9898,7 +10133,7 @@ if (trips.length) {
                     trips:
                         0,
 
-                    participants:
+                    totalParticipants:
                         0
 
                 };
@@ -9909,26 +10144,69 @@ if (trips.length) {
             grouped[location].trips++;
 
 
-            grouped[location].participants +=
-                firstNumberValue(
-                    trip.participantCount,
-                    trip.participants,
-                    trip.totalParticipants,
-                    trip.teamSize,
-                    0
-                );
+            grouped[location]
+                .totalParticipants +=
+                    Number(
+                        trip.participantCount ||
+                        trip.participants ||
+                        trip.totalParticipants ||
+                        0
+                    );
 
         }
     );
 
 
-    const locations =
+    locations =
         Object.values(
             grouped
         );
 
+}
 
-    locations.sort(
+
+if (
+    !locations.length
+) {
+
+    renderEmptyRow(
+        tbody,
+        3,
+        "No mission trip data available."
+    );
+
+    return;
+
+}
+
+
+locations
+    .map(
+        item => ({
+
+            location:
+                item.location ||
+                item.destination ||
+                "Unknown",
+
+            trips:
+                Number(
+                    item.trips ||
+                    item.totalTrips ||
+                    item.totalTeams ||
+                    0
+                ),
+
+            totalParticipants:
+                Number(
+                    item.totalParticipants ||
+                    item.participants ||
+                    0
+                )
+
+        })
+    )
+    .sort(
         (a, b) =>
             a.location.localeCompare(
                 b.location,
@@ -9938,117 +10216,6 @@ if (trips.length) {
                         "base"
                 }
             )
-    );
-
-
-    locations.forEach(
-        item => {
-
-            const tr =
-                document.createElement(
-                    "tr"
-                );
-
-
-            tr.innerHTML = `
-
-                <td>
-                    ${escapeHtml(
-                        item.location
-                    )}
-                </td>
-
-                <td>
-                    ${formatNumber(
-                        item.trips
-                    )}
-                </td>
-
-                <td>
-                    ${formatNumber(
-                        item.participants
-                    )}
-                </td>
-
-            `;
-
-
-            tbody.appendChild(
-                tr
-            );
-
-        }
-    );
-
-
-    return;
-
-}
-
-
-/*
-   No trip rows.
-
-   Fall back to backend location summary if it exists.
-*/
-
-const backendLocations =
-    getMissionLocationRows();
-
-
-if (!backendLocations.length) {
-
-    renderEmptyRow(
-        tbody,
-        3,
-        "No mission trip location data available."
-    );
-
-    return;
-
-}
-
-
-backendLocations
-    .map(
-        item => ({
-
-            location:
-                firstValue(
-                    item.location,
-                    item.destination,
-                    item.country,
-                    "Unknown"
-                ),
-
-            trips:
-                firstNumberValue(
-                    item.trips,
-                    item.totalTrips,
-                    item.totalTeams,
-                    0
-                ),
-
-            participants:
-                firstNumberValue(
-                    item.totalParticipants,
-                    item.participants,
-                    0
-                )
-
-        })
-    )
-    .sort(
-        (a, b) =>
-            String(a.location)
-                .localeCompare(
-                    String(b.location),
-                    undefined,
-                    {
-                        sensitivity:
-                            "base"
-                    }
-                )
     )
     .forEach(
         item => {
@@ -10075,7 +10242,7 @@ backendLocations
 
                 <td>
                     ${formatNumber(
-                        item.participants
+                        item.totalParticipants
                     )}
                 </td>
 
@@ -10088,7 +10255,7 @@ backendLocations
 
         }
     );
-
+```
 
 }
 
@@ -10098,44 +10265,40 @@ PARTICIPANT DIRECTORY
 
 function renderParticipantDirectory() {
 
-
+```
 const tbody =
     document.getElementById(
         "participantSummaryTable"
-    ) ||
-    document.getElementById(
-        "participantTableBody"
     );
 
 
-if (!tbody)
+if (!tbody) {
+
+    console.warn(
+        "participantSummaryTable not found."
+    );
+
     return;
+
+}
 
 
 tbody.innerHTML = "";
 
 
 let people =
-    Array.isArray(
-        Dashboard.filteredParticipants
-    )
-        ? Dashboard.filteredParticipants
-        : getParticipantRows();
+    Dashboard.filteredParticipants ||
+    [];
 
 
 /*
-   Local participant table search.
+   Secondary table search.
 */
 
 const search =
-    String(
-        document.getElementById(
-            "participantTableSearch"
-        )?.value ||
-        ""
-    )
-    .trim()
-    .toLowerCase();
+    getValue(
+        "participantTableSearch"
+    ).toLowerCase();
 
 
 if (search) {
@@ -10152,27 +10315,10 @@ if (search) {
 }
 
 
-people =
-    [...people].sort(
-        (a, b) =>
-            String(
-                a.name ||
-                a.fullName ||
-                ""
-            )
-            .localeCompare(
-                String(
-                    b.name ||
-                    b.fullName ||
-                    ""
-                ),
-                undefined,
-                {
-                    sensitivity:
-                        "base"
-                }
-            )
-    );
+console.log(
+    "Rendering Participants:",
+    people
+);
 
 
 if (!people.length) {
@@ -10184,7 +10330,7 @@ if (!people.length) {
     );
 
 
-    updateFilterResultCount(
+    updateParticipantCount(
         0
     );
 
@@ -10192,6 +10338,24 @@ if (!people.length) {
     return;
 
 }
+
+
+people =
+    [...people].sort(
+        (a, b) =>
+            String(
+                a.name || ""
+            ).localeCompare(
+                String(
+                    b.name || ""
+                ),
+                undefined,
+                {
+                    sensitivity:
+                        "base"
+                }
+            )
+    );
 
 
 people.forEach(
@@ -10209,68 +10373,38 @@ people.forEach(
             );
 
 
-        const name =
-            firstValue(
-                person.name,
-                person.fullName,
-                "Unnamed"
-            );
-
-
-        const church =
-            firstValue(
-                person.church,
-                person.churchName,
-                "-"
-            );
-
-
-        const events =
-            firstNumberValue(
-                person.events,
-                person.eventCount,
-                person.totalEvents,
-                0
-            );
-
-
-        const missionTrips =
-            firstNumberValue(
-                person.missionTrips,
-                person.missionTripCount,
-                person.totalMissionTrips,
-                0
-            );
-
-
         tr.innerHTML = `
 
             <td>
+
                 <button
                     type="button"
                     class="participant-link"
                 >
                     ${escapeHtml(
-                        name
+                        person.name ||
+                        "Unnamed"
                     )}
                 </button>
+
             </td>
 
             <td>
                 ${escapeHtml(
-                    church
+                    person.church ||
+                    "-"
                 )}
             </td>
 
             <td>
                 ${formatNumber(
-                    events
+                    person.events
                 )}
             </td>
 
             <td>
                 ${formatNumber(
-                    missionTrips
+                    person.missionTrips
                 )}
             </td>
 
@@ -10291,6 +10425,7 @@ people.forEach(
 
                     event.stopPropagation();
 
+
                     openParticipantJourney(
                         identifier
                     );
@@ -10301,15 +10436,6 @@ people.forEach(
         }
 
 
-        tr.addEventListener(
-            "click",
-            () =>
-                openParticipantJourney(
-                    identifier
-                )
-        );
-
-
         tbody.appendChild(
             tr
         );
@@ -10318,15 +10444,15 @@ people.forEach(
 );
 
 
-updateFilterResultCount(
+updateParticipantCount(
     people.length
 );
-
+```
 
 }
 
 /* ==========================================================
-PARTICIPANT SEARCH MATCH
+PARTICIPANT SEARCH
 ========================================================== */
 
 function participantMatchesSearch(
@@ -10334,44 +10460,27 @@ person,
 search
 ) {
 
-
+```
 return [
 
     person.name,
-
-    person.fullName,
-
     person.church,
-
-    person.churchName,
-
     person.mobile,
-
-    person.phone,
-
     person.email,
-
-    person.personID,
-
-    person.personId,
-
-    person.personKey
+    person.leadership,
+    person.status,
+    person.age,
+    person.ageGroup
 
 ]
-.filter(
-    value =>
-        value !== undefined &&
-        value !== null
-)
+.filter(Boolean)
 .some(
     value =>
         String(value)
             .toLowerCase()
-            .includes(
-                search
-            )
+            .includes(search)
 );
-
+```
 
 }
 
@@ -10383,299 +10492,19 @@ function getParticipantIdentifier(
 person
 ) {
 
+```
+return (
 
-return firstValue(
-
-    person?.personID,
-
-    person?.personId,
-
-    person?.personKey,
-
-    person?.mobile,
-
-    person?.phone,
-
-    person?.email,
-
-    person?.name,
-
-    person?.fullName,
-
+    person.personID ||
+    person.personId ||
+    person.personKey ||
+    person.email ||
+    person.mobile ||
+    person.name ||
     ""
 
 );
-
-
-}
-
-/* ==========================================================
-PARTICIPANT TABLE SEARCH
-========================================================== */
-
-function setupParticipantTableSearch() {
-
-
-const search =
-    document.getElementById(
-        "participantTableSearch"
-    );
-
-
-if (!search)
-    return;
-
-
-if (
-    search.dataset.bound ===
-    "true"
-)
-    return;
-
-
-search.dataset.bound =
-    "true";
-
-
-search.addEventListener(
-    "input",
-    debounce(
-        () =>
-            renderParticipantDirectory(),
-        200
-    )
-);
-
-
-}
-
-/* ==========================================================
-PARTICIPANT API SEARCH
-========================================================== */
-
-function setupParticipantSearch() {
-
-
-const search =
-    document.getElementById(
-        "participantSearch"
-    );
-
-
-const resultsContainer =
-    document.getElementById(
-        "participantSearchResults"
-    );
-
-
-if (!search)
-    return;
-
-
-if (
-    search.dataset.bound ===
-    "true"
-)
-    return;
-
-
-search.dataset.bound =
-    "true";
-
-
-search.addEventListener(
-    "input",
-    debounce(
-        async function () {
-
-            const value =
-                this.value.trim();
-
-
-            if (!value) {
-
-                if (
-                    resultsContainer
-                ) {
-
-                    resultsContainer.innerHTML =
-                        "";
-
-                }
-
-                return;
-
-            }
-
-
-            try {
-
-                const result =
-                    await API.post(
-                        "searchParticipant",
-                        {
-                            searchTerm:
-                                value
-                        }
-                    );
-
-
-                if (
-                    !result ||
-                    result.success === false
-                ) {
-
-                    throw new Error(
-                        result?.message ||
-                        "Participant search failed."
-                    );
-
-                }
-
-
-                const results =
-                    Array.isArray(
-                        result.data
-                    )
-                        ? result.data
-                        : Array.isArray(
-                            result.data?.results
-                        )
-                            ? result.data.results
-                            : [];
-
-
-                renderParticipantSearchResults(
-                    results,
-                    resultsContainer
-                );
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "PARTICIPANT SEARCH ERROR:",
-                    error
-                );
-
-
-                if (
-                    resultsContainer
-                ) {
-
-                    resultsContainer.innerHTML =
-                        `
-                        <p>
-                            ${escapeHtml(
-                                error.message
-                            )}
-                        </p>
-                        `;
-
-                }
-
-            }
-
-        },
-        300
-    )
-);
-
-
-}
-
-/* ==========================================================
-SEARCH RESULTS
-========================================================== */
-
-function renderParticipantSearchResults(
-results,
-container
-) {
-
-
-if (!container)
-    return;
-
-
-container.innerHTML =
-    "";
-
-
-if (!results.length) {
-
-    container.innerHTML =
-        "<p>No participant found.</p>";
-
-    return;
-
-}
-
-
-results.forEach(
-    person => {
-
-        const button =
-            document.createElement(
-                "button"
-            );
-
-
-        button.type =
-            "button";
-
-
-        button.className =
-            "participantSearchResult";
-
-
-        button.innerHTML = `
-
-            <strong>
-                ${escapeHtml(
-                    firstValue(
-                        person.name,
-                        person.fullName,
-                        "Unnamed"
-                    )
-                )}
-            </strong>
-
-            <span>
-                ${escapeHtml(
-                    firstValue(
-                        person.church,
-                        person.churchName,
-                        ""
-                    )
-                )}
-            </span>
-
-        `;
-
-
-        button.addEventListener(
-            "click",
-            () => {
-
-                openParticipantJourney(
-                    getParticipantIdentifier(
-                        person
-                    )
-                );
-
-            }
-        );
-
-
-        container.appendChild(
-            button
-        );
-
-    }
-);
-
+```
 
 }
 
@@ -10687,11 +10516,11 @@ async function openParticipantJourney(
 identifier
 ) {
 
-
+```
 if (!identifier) {
 
-    console.warn(
-        "No participant identifier."
+    alert(
+        "No participant identifier available."
     );
 
     return;
@@ -10707,7 +10536,7 @@ showIntelligenceLoading(
 
 try {
 
-    const response =
+    const result =
         await API.post(
             "getParticipantDetails",
             {
@@ -10718,18 +10547,18 @@ try {
 
 
     console.log(
-        "PARTICIPANT JOURNEY RESPONSE:",
-        response
+        "PARTICIPANT JOURNEY:",
+        result
     );
 
 
     if (
-        !response ||
-        response.success === false
+        !result ||
+        result.success === false
     ) {
 
         throw new Error(
-            response?.message ||
+            result?.message ||
             "Unable to load participant journey."
         );
 
@@ -10737,8 +10566,8 @@ try {
 
 
     const data =
-        response.data ||
-        response;
+        result.data ||
+        result;
 
 
     if (
@@ -10752,61 +10581,21 @@ try {
     }
 
 
-    if (
-        !data.participant &&
-        !data.person
-    ) {
-
-        throw new Error(
-            "Participant information was not returned."
-        );
-
-    }
-
-
     renderParticipantJourney(
         data
     );
 
 
-    const panel =
+    const modal =
         document.getElementById(
-            "participantJourneyPanel"
+            "detailsModal"
         );
 
 
-    if (panel) {
-
-        panel.classList.remove(
-            "hidden"
-        );
-
-
-        panel.style.display =
-            "block";
-
-
-        panel.scrollIntoView({
-            behavior:
-                "smooth",
-
-            block:
-                "start"
-        });
-
-    }
-
-
-    const journeyModal =
-        document.getElementById(
-            "participantJourneyModal"
-        );
-
-
-    if (journeyModal) {
+    if (modal) {
 
         showModalElement(
-            journeyModal
+            modal
         );
 
     }
@@ -10821,8 +10610,8 @@ catch (error) {
     );
 
 
-    showIntelligenceError(
-        error?.message ||
+    alert(
+        error.message ||
         "Unable to load participant journey."
     );
 
@@ -10835,22 +10624,19 @@ finally {
     );
 
 }
-
+```
 
 }
 
-window.openParticipantJourney =
-openParticipantJourney;
-
 /* ==========================================================
-RENDER PARTICIPANT JOURNEY
+PARTICIPANT JOURNEY RENDER
 ========================================================== */
 
 function renderParticipantJourney(
 data
 ) {
 
-
+```
 const participant =
     data.participant ||
     data.person ||
@@ -10863,96 +10649,67 @@ const summary =
 
 
 const journal =
-    Array.isArray(
-        data.journal
-    )
-        ? data.journal
-        : Array.isArray(
-            data.journey
-        )
-            ? data.journey
-            : [];
+    data.journal ||
+    data.journey ||
+    [];
 
 
-const name =
-    firstValue(
-        participant.name,
-        participant.fullName,
+document.getElementById(
+    "modalTitle"
+).textContent =
+    `Missional Journey — ${
+        participant.name ||
         "Participant"
-    );
-
-
-const church =
-    firstValue(
-        participant.church,
-        participant.churchName,
-        "—"
-    );
-
-
-const contact =
-    firstValue(
-        participant.mobile,
-        participant.phone,
-        participant.email,
-        "—"
-    );
+    }`;
 
 
 setText(
-    "participantJourneyName",
-    name
+    "participantJourneyContact",
+    participant.mobile ||
+    participant.email ||
+    "—"
 );
 
 
 setText(
     "participantJourneyChurch",
-    church
-);
-
-
-setText(
-    "participantJourneyContact",
-    contact
-);
-
-
-setText(
-    "participantJourneyEvents",
-    firstNumberValue(
-        summary.events,
-        summary.eventCount,
-        0
-    )
+    participant.church ||
+    "—"
 );
 
 
 setText(
     "participantJourneyMissionTrips",
-    firstNumberValue(
-        summary.missionTrips,
-        summary.missionTripCount,
-        0
-    )
+    summary.missionTrips ||
+    0
+);
+
+
+setText(
+    "participantJourneyEvents",
+    summary.events ||
+    0
 );
 
 
 renderParticipantChronology(
-    journal
+    Array.isArray(journal)
+        ? journal
+        : []
 );
-
+```
 
 }
 
 /* ==========================================================
-PARTICIPANT CHRONOLOGY
+CHRONOLOGY
 ========================================================== */
 
 function renderParticipantChronology(
 journal
 ) {
 
-
+```
 const tbody =
     document.getElementById(
         "participantJourneyTableBody"
@@ -10963,19 +10720,15 @@ if (!tbody)
     return;
 
 
-tbody.innerHTML =
-    "";
+tbody.innerHTML = "";
 
 
-if (
-    !Array.isArray(journal) ||
-    !journal.length
-) {
+if (!journal.length) {
 
     renderEmptyRow(
         tbody,
         4,
-        "No chronological engagement found."
+        "No engagement history."
     );
 
     return;
@@ -10983,1171 +10736,82 @@ if (
 }
 
 
-const sorted =
-    [...journal].sort(
-        (a, b) =>
-            getTimestamp(
-                a.date ||
-                a.eventDate ||
-                a.startDate
-            ) -
-            getTimestamp(
-                b.date ||
-                b.eventDate ||
-                b.startDate
-            )
-    );
-
-
-sorted.forEach(
-    entry => {
-
-        const tr =
-            document.createElement(
-                "tr"
-            );
-
-
-        const date =
-            firstValue(
-                entry.displayDate,
-                entry.dateText,
-                formatParticipantJourneyDate(
-                    entry.date ||
-                    entry.eventDate ||
-                    entry.startDate
-                ),
-                "—"
-            );
-
-
-        const title =
-            firstValue(
-                entry.eventOrTrip,
-                entry.eventName,
-                entry.tripName,
-                entry.title,
-                "—"
-            );
-
-
-        const description =
-            firstValue(
-                entry.description,
-                entry.notes,
-                "—"
-            );
-
-
-        const location =
-            firstValue(
-                entry.location,
-                entry.destination,
-                entry.country,
-                "—"
-            );
-
-
-        tr.innerHTML = `
-
-            <td>
-                ${escapeHtml(
-                    date
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    title
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    description
-                )}
-            </td>
-
-            <td>
-                ${escapeHtml(
-                    location
-                )}
-            </td>
-
-        `;
-
-
-        tbody.appendChild(
-            tr
-        );
-
-    }
-);
-
-
-}
-
-/* ==========================================================
-FILTER INITIALISATION
-========================================================== */
-
-function initialiseFilters() {
-
-
-/*
-   Year
-*/
-
-populateFilter(
-    "filterYear",
-    getAvailableYears(),
-    "All Years"
-);
-
-
-/*
-   Church
-*/
-
-populateFilter(
-    "filterChurch",
-    uniqueValuesFromFields(
-        getParticipantRows(),
-        [
-            "church",
-            "churchName"
-        ]
-    ),
-    "All Churches"
-);
-
-
-/*
-   Event Type
-*/
-
-populateFilter(
-    "filterEventType",
-    uniqueValuesFromFields(
-        getEventTopLineRows(),
-        [
-            "eventType",
-            "type"
-        ]
-    ),
-    "All Event Types"
-);
-
-
-/*
-   Event
-*/
-
-populateFilter(
-    "filterEvent",
-    getAvailableEventNames(),
-    "All Events"
-);
-
-
-bindFilterControls();
-
-
-}
-
-/* ==========================================================
-AVAILABLE YEARS
-========================================================== */
-
-function getAvailableYears() {
-
-
-const years = [];
-
-
-/*
-   Event rows
-*/
-
-getEventTopLineRows()
-    .forEach(
-        row => {
-
-            const year =
-                getYear(
-                    row.date ||
-                    row.eventDate
-                );
-
-
-            if (year)
-                years.push(year);
-
-        }
-    );
-
-
-/*
-   Mission trips
-*/
-
-getMissionTripRows()
-    .forEach(
-        row => {
-
-            const year =
-                getYear(
-                    row.startDate ||
-                    row.date ||
-                    row.eventDate
-                );
-
-
-            if (year)
-                years.push(year);
-
-        }
-    );
-
-
-return [
-    ...new Set(
-        years
-    )
-]
-.sort(
-    (a, b) =>
-        Number(a) -
-        Number(b)
-);
-
-
-}
-
-/* ==========================================================
-EVENT NAMES
-========================================================== */
-
-function getAvailableEventNames() {
-
-
-const names = [];
-
-
-getEventTopLineRows()
-    .forEach(
-        row => {
-
-            const name =
-                firstValue(
-                    row.event,
-                    row.eventName
-                );
-
-
-            if (name)
-                names.push(name);
-
-        }
-    );
-
-
-return [
-    ...new Set(
-        names
-    )
-]
-.sort(
-    (a, b) =>
-        String(a)
-            .localeCompare(
-                String(b),
-                undefined,
-                {
-                    sensitivity:
-                        "base"
-                }
-            )
-);
-
-
-}
-
-/* ==========================================================
-FILTER CONTROLS
-========================================================== */
-
-function bindFilterControls() {
-
-
-const ids = [
-
-    "filterYear",
-
-    "filterChurch",
-
-    "filterEventType",
-
-    "filterEvent"
-
-];
-
-
-ids.forEach(
-    id => {
-
-        const element =
-            document.getElementById(
-                id
-            );
-
-
-        if (!element)
-            return;
-
-
-        if (
-            element.dataset.bound ===
-            "true"
-        )
-            return;
-
-
-        element.dataset.bound =
-            "true";
-
-
-        element.addEventListener(
-            "change",
-            applyDashboardFilters
-        );
-
-    }
-);
-
-
-const reset =
-    document.getElementById(
-        "resetFilters"
-    );
-
-
-if (
-    reset &&
-    reset.dataset.bound !==
-        "true"
-) {
-
-    reset.dataset.bound =
-        "true";
-
-
-    reset.addEventListener(
-        "click",
-        resetDashboardFilters
-    );
-
-}
-
-
-setupParticipantTableSearch();
-
-setupParticipantSearch();
-
-
-Dashboard.filtersBound =
-    true;
-
-
-}
-
-/* ==========================================================
-APPLY FILTERS
-========================================================== */
-
-function applyDashboardFilters() {
-
-
-const year =
-    getFilterValue(
-        "filterYear"
-    );
-
-
-const church =
-    getFilterValue(
-        "filterChurch"
-    );
-
-
-const eventType =
-    getFilterValue(
-        "filterEventType"
-    );
-
-
-const eventName =
-    getFilterValue(
-        "filterEvent"
-    );
-
-
-const participantSearch =
-    getFilterValue(
-        "participantSearch"
-    )
-    .toLowerCase();
-
-
-/*
-   ------------------------------------------------------
-   PARTICIPANTS
-   ------------------------------------------------------
-*/
-
-Dashboard.filteredParticipants =
-    getParticipantRows()
-        .filter(
-            person => {
-
-                if (
-                    church &&
-                    !matchesAnyField(
-                        person,
-                        [
-                            "church",
-                            "churchName"
-                        ],
-                        church
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                if (
-                    participantSearch &&
-                    !participantMatchesSearch(
-                        person,
-                        participantSearch
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                /*
-                   Year is only applied to a participant
-                   if the backend supplied a participant
-                   date/year field.
-
-                   Otherwise the participant remains visible
-                   because participantSummary is an aggregate.
-                */
-
-                if (
-                    year &&
-                    hasDateField(
-                        person
-                    )
-                ) {
-
-                    if (
-                        !matchesYear(
-                            person,
-                            year
-                        )
-                    ) {
-
-                        return false;
-
-                    }
-
-                }
-
-
-                return true;
-
-            }
-        );
-
-
-/*
-   ------------------------------------------------------
-   EVENT TOP LINES
-   ------------------------------------------------------
-*/
-
-Dashboard.filteredEventTopLines =
-    getEventTopLineRows()
-        .filter(
-            event => {
-
-                if (
-                    year &&
-                    hasDateField(
-                        event
-                    ) &&
-                    !matchesYear(
-                        event,
-                        year
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                if (
-                    eventType &&
-                    !matchesAnyField(
-                        event,
-                        [
-                            "eventType",
-                            "type"
-                        ],
-                        eventType
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                if (
-                    eventName &&
-                    !matchesAnyField(
-                        event,
-                        [
-                            "event",
-                            "eventName"
-                        ],
-                        eventName
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                return true;
-
-            }
-        );
-
-
-/*
-   ------------------------------------------------------
-   MISSION TRIPS
-   ------------------------------------------------------
-*/
-
-Dashboard.filteredMissionTrips =
-    getMissionTripRows()
-        .filter(
-            trip => {
-
-                /*
-                   Year
-                */
-
-                if (
-                    year &&
-                    hasDateField(
-                        trip
-                    ) &&
-                    !matchesYear(
-                        trip,
-                        year
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                /*
-                   Church
-
-                   Only filter by church when the trip
-                   record actually contains a church field.
-                */
-
-                if (
-                    church &&
-                    hasAnyField(
-                        trip,
-                        [
-                            "church",
-                            "churchName"
-                        ]
-                    ) &&
-                    !matchesAnyField(
-                        trip,
-                        [
-                            "church",
-                            "churchName"
-                        ],
-                        church
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                /*
-                   Event type / event name
-
-                   These are applied only where the mission
-                   trip record contains corresponding fields.
-                */
-
-                if (
-                    eventType &&
-                    hasAnyField(
-                        trip,
-                        [
-                            "eventType",
-                            "type"
-                        ]
-                    ) &&
-                    !matchesAnyField(
-                        trip,
-                        [
-                            "eventType",
-                            "type"
-                        ],
-                        eventType
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                if (
-                    eventName &&
-                    hasAnyField(
-                        trip,
-                        [
-                            "event",
-                            "eventName"
-                        ]
-                    ) &&
-                    !matchesAnyField(
-                        trip,
-                        [
-                            "event",
-                            "eventName"
-                        ],
-                        eventName
-                    )
-                ) {
-
-                    return false;
-
-                }
-
-
-                return true;
-
-            }
-        );
-
-
-/*
-   Render everything again.
-*/
-
-renderEventTopLines();
-
-renderMissionTripTopLines();
-
-renderMissionTripSummary();
-
-renderMissionTripLocationSummary();
-
-renderParticipantDirectory();
-
-updateFilterResultCount();
-
-
-}
-
-/* ==========================================================
-RESET
-========================================================== */
-
-function resetDashboardFilters() {
-
-
-[
-
-    "filterYear",
-
-    "filterChurch",
-
-    "filterEventType",
-
-    "filterEvent",
-
-    "participantSearch",
-
-    "participantTableSearch"
-
-]
-.forEach(
-    id => {
-
-        const element =
-            document.getElementById(
-                id
-            );
-
-
-        if (element) {
-
-            element.value =
-                "";
-
-        }
-
-    }
-);
-
-
-const results =
-    document.getElementById(
-        "participantSearchResults"
-    );
-
-
-if (results) {
-
-    results.innerHTML =
-        "";
-
-}
-
-
-Dashboard.filteredParticipants =
-    getParticipantRows();
-
-
-Dashboard.filteredEventTopLines =
-    getEventTopLineRows();
-
-
-Dashboard.filteredMissionTrips =
-    getMissionTripRows();
-
-
-renderDashboard();
-
-
-}
-
-/* ==========================================================
-FILTER RESULT COUNT
-========================================================== */
-
-function updateFilterResultCount(
-explicitCount
-) {
-
-
-const count =
-    explicitCount ??
-    Dashboard.filteredParticipants.length;
-
-
-setText(
-    "participantResultCount",
-    `${formatNumber(
-        count
-    )} participants`
-);
-
-
-}
-
-/* ==========================================================
-FILTER HELPERS
-========================================================== */
-
-function getFilterValue(
-id
-) {
-
-
-const element =
-    document.getElementById(
-        id
-    );
-
-
-return String(
-    element?.value ||
-    ""
-).trim();
-
-
-}
-
-function hasActiveDashboardFilters() {
-
-
-return [
-
-    "filterYear",
-
-    "filterChurch",
-
-    "filterEventType",
-
-    "filterEvent",
-
-    "participantSearch"
-
-]
-.some(
-    id =>
-        Boolean(
-            getFilterValue(id)
-        )
-);
-
-
-}
-
-/* ==========================================================
-POPULATE SELECT
-========================================================== */
-
-function populateFilter(
-elementId,
-values,
-defaultLabel
-) {
-
-
-const select =
-    document.getElementById(
-        elementId
-    );
-
-
-if (!select)
-    return;
-
-
-const current =
-    select.value;
-
-
-select.innerHTML =
-    "";
-
-
-const defaultOption =
-    document.createElement(
-        "option"
-    );
-
-
-defaultOption.value =
-    "";
-
-
-defaultOption.textContent =
-    defaultLabel;
-
-
-select.appendChild(
-    defaultOption
-);
-
-
-const cleanValues =
-    [
-        ...new Set(
-            (values || [])
-                .filter(
-                    value =>
-                        value !==
-                        undefined &&
-                        value !==
-                        null &&
-                        String(value)
-                            .trim() !==
-                            ""
-                )
-                .map(
-                    value =>
-                        String(
-                            value
-                        )
-                )
-        )
-    ];
-
-
-cleanValues
+[...journal]
     .sort(
         (a, b) =>
-            a.localeCompare(
-                b,
-                undefined,
-                {
-                    numeric:
-                        true,
-
-                    sensitivity:
-                        "base"
-                }
+            new Date(
+                a.date || 0
+            ) -
+            new Date(
+                b.date || 0
             )
     )
     .forEach(
-        value => {
+        entry => {
 
-            const option =
+            const tr =
                 document.createElement(
-                    "option"
+                    "tr"
                 );
 
 
-            option.value =
-                value;
+            tr.innerHTML = `
+
+                <td>
+                    ${escapeHtml(
+                        entry.displayDate ||
+                        formatDate(
+                            entry.date
+                        )
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        entry.eventOrTrip ||
+                        entry.eventName ||
+                        entry.tripName ||
+                        entry.title ||
+                        "—"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        entry.description ||
+                        "—"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        entry.location ||
+                        "—"
+                    )}
+                </td>
+
+            `;
 
 
-            option.textContent =
-                value;
-
-
-            select.appendChild(
-                option
+            tbody.appendChild(
+                tr
             );
 
         }
     );
-
-
-if (
-    cleanValues.includes(
-        current
-    )
-) {
-
-    select.value =
-        current;
-
-}
-
+```
 
 }
 
 /* ==========================================================
-UNIQUE VALUES FROM MULTIPLE FIELDS
-========================================================== */
-
-function uniqueValuesFromFields(
-rows,
-fields
-) {
-
-
-const values = [];
-
-
-(rows || [])
-    .forEach(
-        row => {
-
-            fields.forEach(
-                field => {
-
-                    if (
-                        row?.[field] !==
-                        undefined &&
-                        row?.[field] !==
-                        null &&
-                        String(
-                            row[field]
-                        ).trim()
-                    ) {
-
-                        values.push(
-                            String(
-                                row[field]
-                            ).trim()
-                        );
-
-                    }
-
-                }
-            );
-
-        }
-    );
-
-
-return [
-    ...new Set(
-        values
-    )
-];
-
-
-}
-
-/* ==========================================================
-MATCH FIELD
-========================================================== */
-
-function hasAnyField(
-object,
-fields
-) {
-
-
-return fields.some(
-    field =>
-        object?.[field] !==
-            undefined &&
-        object?.[field] !==
-            null &&
-        String(
-            object[field]
-        ).trim() !== ""
-);
-
-
-}
-
-function matchesAnyField(
-object,
-fields,
-value
-) {
-
-
-const target =
-    String(
-        value
-    )
-    .trim()
-    .toLowerCase();
-
-
-return fields.some(
-    field => {
-
-        const fieldValue =
-            object?.[field];
-
-
-        if (
-            fieldValue ===
-                undefined ||
-            fieldValue ===
-                null
-        )
-            return false;
-
-
-        return String(
-            fieldValue
-        )
-        .trim()
-        .toLowerCase() ===
-            target;
-
-    }
-);
-
-
-}
-
-/* ==========================================================
-DATE HELPERS
-========================================================== */
-
-function hasDateField(
-object
-) {
-
-
-return [
-
-    "date",
-
-    "eventDate",
-
-    "startDate",
-
-    "endDate",
-
-    "timestamp",
-
-    "createdAt"
-
-]
-.some(
-    field =>
-        object?.[field] !==
-            undefined &&
-        object?.[field] !==
-            null &&
-        String(
-            object[field]
-        ).trim() !== ""
-);
-
-
-}
-
-function matchesYear(
-object,
-year
-) {
-
-
-const date =
-    object?.date ||
-    object?.eventDate ||
-    object?.startDate ||
-    object?.timestamp ||
-    object?.createdAt;
-
-
-return (
-    getYear(date) ===
-    String(year)
-);
-
-
-}
-
-/* ==========================================================
-MODALS
+MODAL
 ========================================================== */
 
 function showModalElement(
 modal
 ) {
 
-
+```
 if (!modal)
     return;
 
@@ -12166,29 +10830,7 @@ modal.setAttribute(
     "aria-hidden",
     "false"
 );
-
-
-}
-
-function openModal(
-modalId
-) {
-
-
-const modal =
-    document.getElementById(
-        modalId
-    );
-
-
-if (!modal)
-    return;
-
-
-showModalElement(
-    modal
-);
-
+```
 
 }
 
@@ -12196,7 +10838,7 @@ function closeModal(
 modalId
 ) {
 
-
+```
 const modal =
     document.getElementById(
         modalId
@@ -12221,9 +10863,31 @@ modal.setAttribute(
     "aria-hidden",
     "true"
 );
-
+```
 
 }
+
+function openModal(
+modalId
+) {
+
+```
+const modal =
+    document.getElementById(
+        modalId
+    );
+
+
+if (modal)
+    showModalElement(
+        modal
+    );
+```
+
+}
+
+window.openParticipantJourney =
+openParticipantJourney;
 
 window.openModal =
 openModal;
@@ -12232,447 +10896,95 @@ window.closeModal =
 closeModal;
 
 /* ==========================================================
-MODAL CONTROLS
+RESET
 ========================================================== */
 
-function bindModalControls() {
+function resetDashboardFilters() {
 
+```
+[
 
-document
-    .querySelectorAll(
-        "#intelligence [data-close-modal]"
-    )
-    .forEach(
-        button => {
+    "filterYear",
+    "filterChurch",
+    "filterLeadership",
+    "filterStatus",
+    "filterEventType",
+    "filterEvent",
+    "participantSearch",
+    "participantTableSearch"
 
-            if (
-                button.dataset.bound ===
-                "true"
-            )
-                return;
+]
+.forEach(
+    id => {
 
-
-            button.dataset.bound =
-                "true";
-
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    closeModal(
-                        button.dataset
-                            .closeModal
-                    );
-
-                }
-            );
-
-        }
-    );
-
-
-document
-    .querySelectorAll(
-        "#intelligence .modal"
-    )
-    .forEach(
-        modal => {
-
-            if (
-                modal.dataset.bound ===
-                "true"
-            )
-                return;
-
-
-            modal.dataset.bound =
-                "true";
-
-
-            modal.addEventListener(
-                "click",
-                event => {
-
-                    if (
-                        event.target ===
-                        modal
-                    ) {
-
-                        closeModal(
-                            modal.id
-                        );
-
-                    }
-
-                }
-            );
-
-        }
-    );
-
-
-const closeParticipant =
-    document.getElementById(
-        "closeParticipantJourney"
-    );
-
-
-if (
-    closeParticipant &&
-    closeParticipant.dataset.bound !==
-        "true"
-) {
-
-    closeParticipant.dataset.bound =
-        "true";
-
-
-    closeParticipant.addEventListener(
-        "click",
-        () => {
-
-            closeModal(
-                "participantJourneyModal"
+        const element =
+            document.getElementById(
+                id
             );
 
 
-            closeModal(
-                "detailsModal"
-            );
-
-        }
-    );
-
-}
-
-
-}
-
-/* ==========================================================
-DASHBOARD UI
-========================================================== */
-
-function bindDashboardUI() {
-
-
-if (
-    Dashboard.uiBound
-)
-    return;
-
-
-bindModalControls();
-
-
-const refresh =
-    document.getElementById(
-        "refreshDashboard"
-    );
-
-
-if (
-    refresh &&
-    refresh.dataset.bound !==
-        "true"
-) {
-
-    refresh.dataset.bound =
-        "true";
-
-
-    refresh.addEventListener(
-        "click",
-        refreshDashboard
-    );
-
-}
-
-
-Dashboard.uiBound =
-    true;
-
-
-}
-
-/* ==========================================================
-GENERIC DETAILS MODAL
-========================================================== */
-
-function showDetailsModal(
-title,
-data
-) {
-
-
-const modal =
-    document.getElementById(
-        "detailsModal"
-    );
-
-
-const titleElement =
-    document.getElementById(
-        "modalTitle"
-    );
-
-
-const body =
-    document.getElementById(
-        "modalBody"
-    );
-
-
-if (
-    !modal ||
-    !titleElement ||
-    !body
-)
-    return;
-
-
-titleElement.textContent =
-    title ||
-    "Details";
-
-
-body.innerHTML = `
-
-    <pre>
-
-
-${escapeHtml(
-JSON.stringify(
-data,
-null,
-2
-)
-)} </pre>
-
-
-`;
-
-
-showModalElement(
-    modal
-);
-
-
-}
-
-/* ==========================================================
-EVENT DETAILS
-========================================================== */
-
-async function openEventDetails(
-eventName
-) {
-
-
-if (!eventName)
-    return;
-
-
-showIntelligenceLoading(
-    true,
-    "Loading event details..."
-);
-
-
-try {
-
-    const result =
-        await API.post(
-            "getEventDetails",
-            {
-                eventName:
-                    eventName,
-
-                event:
-                    eventName
-            }
-        );
-
-
-    if (
-        !result ||
-        result.success === false
-    ) {
-
-        throw new Error(
-            result?.message ||
-            "Unable to load event details."
-        );
+        if (element)
+            element.value = "";
 
     }
+);
 
 
-    showDetailsModal(
-        eventName,
-        result.data
-    );
-
-}
-
-catch (error) {
-
-    console.error(
-        "EVENT DETAILS ERROR:",
-        error
-    );
-
-
-    showIntelligenceError(
-        error?.message ||
-        "Unable to load event details."
-    );
+applyDashboardFilters();
+```
 
 }
 
-finally {
-
-    showIntelligenceLoading(
-        false
-    );
-
-}
-
-
-}
-
-window.openEventDetails =
-openEventDetails;
+window.resetDashboardFilters =
+resetDashboardFilters;
 
 /* ==========================================================
-TEXT
+HELPERS
 ========================================================== */
 
-function setText(
-id,
-value
+function getValue(
+id
 ) {
 
-
+```
 const element =
     document.getElementById(
         id
     );
 
 
-if (!element)
-    return;
-
-
-element.textContent =
-    value ??
-    "";
-
+return String(
+    element?.value ||
+    ""
+).trim();
+```
 
 }
 
-/* ==========================================================
-NUMBER HELPERS
-========================================================== */
-
-function numberValue(
-...values
+function setText(
+id,
+value
 ) {
 
-
-for (
-    const value of values
-) {
-
-    if (
-        value !==
-            undefined &&
-        value !==
-            null &&
-        value !== ""
-    ) {
-
-        const number =
-            Number(
-                value
-            );
+```
+const element =
+    document.getElementById(
+        id
+    );
 
 
-        if (
-            Number.isFinite(
-                number
-            )
-        ) {
-
-            return number;
-
-        }
-
-    }
+if (element)
+    element.textContent =
+        value ?? "";
+```
 
 }
-
-
-return 0;
-
-
-}
-
-function firstNumberValue(
-...values
-) {
-
-
-/*
-   Last argument may be a fallback.
-*/
-
-return numberValue(
-    ...values
-);
-
-
-}
-
-function firstValue(
-...values
-) {
-
-
-for (
-    const value of values
-) {
-
-    if (
-        value !==
-            undefined &&
-        value !==
-            null &&
-        String(
-            value
-        ).trim() !== ""
-    ) {
-
-        return value;
-
-    }
-
-}
-
-
-return "";
-
-
-}
-
-/* ==========================================================
-NUMBER FORMAT
-========================================================== */
 
 function formatNumber(
 value
 ) {
 
-
+```
 const number =
     Number(
         value || 0
@@ -12680,9 +10992,7 @@ const number =
 
 
 if (
-    !Number.isFinite(
-        number
-    )
+    Number.isNaN(number)
 )
     return "0";
 
@@ -12690,70 +11000,40 @@ if (
 return number.toLocaleString(
     "en-SG"
 );
-
+```
 
 }
-
-/* ==========================================================
-DATE FORMAT
-========================================================== */
 
 function formatDate(
 value
 ) {
 
-
+```
 if (!value)
     return "—";
 
 
 const date =
-    new Date(
-        value
-    );
+    new Date(value);
 
 
 if (
     Number.isNaN(
         date.getTime()
     )
-) {
-
-    return String(
-        value
-    );
-
-}
+)
+    return String(value);
 
 
 return date.toLocaleDateString(
     "en-SG",
     {
-
-        day:
-            "2-digit",
-
-        month:
-            "short",
-
-        year:
-            "numeric"
-
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
     }
 );
-
-
-}
-
-function formatParticipantJourneyDate(
-value
-) {
-
-
-return formatDate(
-    value
-);
-
+```
 
 }
 
@@ -12761,15 +11041,13 @@ function getYear(
 value
 ) {
 
-
+```
 if (!value)
     return "";
 
 
 const date =
-    new Date(
-        value
-    );
+    new Date(value);
 
 
 if (
@@ -12783,38 +11061,41 @@ if (
 return String(
     date.getFullYear()
 );
-
+```
 
 }
 
-function getTimestamp(
+function escapeHtml(
 value
 ) {
 
-
-if (!value)
-    return 0;
-
-
-const time =
-    new Date(
-        value
-    )
-    .getTime();
-
-
-return Number.isFinite(
-    time
+```
+return String(
+    value ?? ""
 )
-    ? time
-    : 0;
-
+.replace(
+    /&/g,
+    "&amp;"
+)
+.replace(
+    /</g,
+    "&lt;"
+)
+.replace(
+    />/g,
+    "&gt;"
+)
+.replace(
+    /"/g,
+    "&quot;"
+)
+.replace(
+    /'/g,
+    "&#039;"
+);
+```
 
 }
-
-/* ==========================================================
-EMPTY ROW
-========================================================== */
 
 function renderEmptyRow(
 tbody,
@@ -12822,7 +11103,7 @@ colspan,
 message
 ) {
 
-
+```
 const tr =
     document.createElement(
         "tr"
@@ -12846,62 +11127,41 @@ tr.innerHTML = `
 tbody.appendChild(
     tr
 );
-
+```
 
 }
 
-/* ==========================================================
-HTML ESCAPE
-========================================================== */
-
-function escapeHtml(
-value
+function updateParticipantCount(
+count
 ) {
 
-
-return String(
-    value ??
-    ""
-)
-
-.replace(
-    /&/g,
-    "&amp;"
-)
-
-.replace(
-    /</g,
-    "&lt;"
-)
-
-.replace(
-    />/g,
-    "&gt;"
-)
-
-.replace(
-    /"/g,
-    "&quot;"
-)
-
-.replace(
-    /'/g,
-    "&#039;"
+```
+setText(
+    "participantResultCount",
+    `${formatNumber(
+        count
+    )} participants`
 );
-
+```
 
 }
 
-/* ==========================================================
-DEBOUNCE
-========================================================== */
+function hasMissionTripFilter() {
+
+```
+return Boolean(
+    Dashboard.filters.year
+);
+```
+
+}
 
 function debounce(
 callback,
 delay
 ) {
 
-
+```
 let timer;
 
 
@@ -12926,7 +11186,7 @@ return function (...args) {
         );
 
 };
-
+```
 
 }
 
@@ -12939,7 +11199,7 @@ show,
 message
 ) {
 
-
+```
 const overlay =
     document.getElementById(
         "loadingOverlay"
@@ -12951,8 +11211,8 @@ if (!overlay)
 
 
 const text =
-    document.getElementById(
-        "loadingText"
+    overlay.querySelector(
+        ".loadingText"
     );
 
 
@@ -12971,7 +11231,7 @@ overlay.classList.toggle(
     "hidden",
     !show
 );
-
+```
 
 }
 
@@ -12983,12 +11243,7 @@ function showIntelligenceError(
 message
 ) {
 
-
-console.error(
-    message
-);
-
-
+```
 const element =
     document.getElementById(
         "dashboardError"
@@ -13001,19 +11256,19 @@ if (!element)
 
 element.textContent =
     message ||
-    "Unable to load dashboard.";
+    "Unable to load Mission Intelligence.";
 
 
 element.classList.remove(
     "hidden"
 );
-
+```
 
 }
 
 function clearIntelligenceError() {
 
-
+```
 const element =
     document.getElementById(
         "dashboardError"
@@ -13031,7 +11286,7 @@ element.textContent =
 element.classList.add(
     "hidden"
 );
-
+```
 
 }
 
@@ -13041,106 +11296,68 @@ LAST REFRESH
 
 function updateLastRefresh() {
 
+```
+setText(
+    "lastRefresh",
+    new Date().toLocaleString(
+        "en-SG"
+    )
+);
+```
 
-const element =
-    document.getElementById(
-        "lastRefresh"
-    );
+}
 
+/* ==========================================================
+MODAL CONTROLS
+========================================================== */
 
-if (!element)
-    return;
+document.addEventListener(
+"click",
+event => {
 
-
-element.textContent =
-    new Date()
-        .toLocaleString(
-            "en-SG"
+```
+    const closeButton =
+        event.target.closest(
+            "[data-close-modal]"
         );
 
 
+    if (closeButton) {
+
+        closeModal(
+            closeButton.dataset
+                .closeModal
+        );
+
+    }
+
+
+    if (
+        event.target.classList.contains(
+            "modal"
+        )
+    ) {
+
+        closeModal(
+            event.target.id
+        );
+
+    }
+
 }
+```
+
+);
 
 /* ==========================================================
-COMPATIBILITY
-========================================================== */
-
-function dashboardReady() {
-
-
-clearIntelligenceError();
-
-updateLastRefresh();
-
-updateFilterResultCount();
-
-
-}
-
-function refreshFilteredDashboard() {
-
-
-applyDashboardFilters();
-
-
-}
-
-function setupFilters() {
-
-
-initialiseFilters();
-
-
-}
-
-function setupParticipantSearchLegacy() {
-
-
-setupParticipantSearch();
-
-
-}
-
-/* ==========================================================
-GLOBAL ACCESS
+GLOBAL
 ========================================================== */
 
 window.initIntelligenceCenter =
 initIntelligenceCenter;
 
-window.refreshDashboard =
-refreshDashboard;
-
-window.refreshIntelligenceCenter =
-refreshDashboard;
-
 window.applyDashboardFilters =
 applyDashboardFilters;
-
-window.resetDashboardFilters =
-resetDashboardFilters;
-
-window.openParticipantJourney =
-openParticipantJourney;
-
-window.openEventDetails =
-openEventDetails;
-
-window.openModal =
-openModal;
-
-window.closeModal =
-closeModal;
-
-/* ==========================================================
-IMPORTANT
-
-NO DOMContentLoaded API CALL
-
-The Intelligence Centre is lazy-loaded by the dashboard
-navigation.
-
-========================================================== */
 
 console.log(
 "Missions Intelligence Centre JS ready — waiting for section open."
