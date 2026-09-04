@@ -8950,101 +8950,289 @@ finally {
 LOAD DASHBOARD
 ========================================================== */
 
+javascript
+/* ==========================================================
+   LOAD DASHBOARD
+   ========================================================== */
+
 async function loadDashboard() {
 
+    console.log(
+        "=== INTELLIGENCE API START ==="
+    );
 
-console.log(
-    "=== INTELLIGENCE API START ==="
-);
+    const result =
+        await API.post(
+            "getMissionDashboard",
+            {}
+        );
+
+    console.log(
+        "=== INTELLIGENCE API COMPLETED ==="
+    );
+
+    console.log(
+        "FULL API RESULT:",
+        result
+    );
+
+    /*
+       ------------------------------------------------------
+       VALIDATE API RESPONSE
+       ------------------------------------------------------
+    */
+
+    if (!result) {
+
+        throw new Error(
+            "Mission dashboard API returned no response."
+        );
+
+    }
+
+    if (result.success === false) {
+
+        throw new Error(
+            result.message ||
+            "Mission dashboard API failed."
+        );
+
+    }
 
 
-const result =
-    await API.post(
-        "getMissionDashboard",
-        {}
+    /*
+       ------------------------------------------------------
+       GET PAYLOAD
+       ------------------------------------------------------
+    */
+
+    const payload =
+        result.data ??
+        result.dashboard ??
+        result;
+
+
+    console.log(
+        "RAW DASHBOARD PAYLOAD:",
+        payload
     );
 
 
-console.log(
-    "=== INTELLIGENCE API COMPLETED ==="
-);
+    /*
+       ------------------------------------------------------
+       IMPORTANT:
+       Detect empty object.
+
+       {} is truthy in JavaScript, so the old
+       `if (!Dashboard.data)` check did not work.
+       ------------------------------------------------------
+    */
+
+    if (
+        !payload ||
+        typeof payload !== "object" ||
+        Array.isArray(payload)
+    ) {
+
+        throw new Error(
+            "Mission dashboard returned an invalid data payload."
+        );
+
+    }
 
 
-console.log(
-    "RESULT:",
-    result
-);
+    const payloadKeys =
+        Object.keys(payload);
 
 
-if (
-    !result ||
-    result.success === false
-) {
-
-    throw new Error(
-        result?.message ||
-        "Unable to load mission dashboard."
+    console.log(
+        "PAYLOAD KEYS:",
+        payloadKeys
     );
 
-}
+
+    if (!payloadKeys.length) {
+
+        throw new Error(
+            "Mission dashboard API returned an empty data object. " +
+            "The problem is in getMissionDashboard/API response, " +
+            "not the dashboard HTML."
+        );
+
+    }
 
 
-const payload =
-    result.data ||
-    {};
+    /*
+       ------------------------------------------------------
+       NORMALISE PAYLOAD
+       ------------------------------------------------------
+    */
+
+    /*
+       Standard backend response:
+
+       {
+           generatedAt,
+           kpis,
+           averages,
+           tables,
+           missionTrips
+       }
+
+       Some API wrappers may return:
+
+       {
+           dashboard: {
+               ...
+           }
+       }
+    */
+
+    let dashboard =
+        payload.dashboard ||
+        payload;
 
 
-Dashboard.data =
-    payload.dashboard ||
-    payload;
+    /*
+       ------------------------------------------------------
+       HANDLE NESTED DATA WRAPPER
+       ------------------------------------------------------
+    */
+
+    if (
+        dashboard &&
+        dashboard.data &&
+        typeof dashboard.data === "object" &&
+        !Array.isArray(dashboard.data)
+    ) {
+
+        /*
+           Only unwrap if the outer object does not
+           already contain the actual dashboard fields.
+        */
+
+        const hasDashboardFields =
+            dashboard.kpis ||
+            dashboard.tables ||
+            dashboard.missionTrips ||
+            dashboard.averages;
+
+        if (!hasDashboardFields) {
+
+            dashboard =
+                dashboard.data;
+
+        }
+
+    }
 
 
-Dashboard.missionData =
-    payload.missionData ||
-    Dashboard.data?.missionTrips ||
-    {};
+    /*
+       ------------------------------------------------------
+       STORE DASHBOARD
+       ------------------------------------------------------
+    */
+
+    Dashboard.data =
+        dashboard || {};
 
 
-if (!Dashboard.data) {
+    /*
+       ------------------------------------------------------
+       MISSION DATA
+       ------------------------------------------------------
+    */
 
-    throw new Error(
-        "Mission dashboard data was not returned."
+    Dashboard.missionData =
+        Dashboard.data.missionData ||
+        Dashboard.data.missionTrips ||
+        {};
+
+
+    /*
+       ------------------------------------------------------
+       DEBUG STRUCTURE
+       ------------------------------------------------------
+    */
+
+    console.log(
+        "=== NORMALISED DASHBOARD ==="
     );
 
+    console.log(
+        "DASHBOARD DATA:",
+        Dashboard.data
+    );
+
+    console.log(
+        "DASHBOARD KEYS:",
+        Object.keys(
+            Dashboard.data
+        )
+    );
+
+    console.log(
+        "KPIs:",
+        Dashboard.data.kpis
+    );
+
+    console.log(
+        "TABLES:",
+        Dashboard.data.tables
+    );
+
+    console.log(
+        "PARTICIPANTS:",
+        Dashboard.data
+            ?.tables
+            ?.participantSummary
+            ?.length || 0
+    );
+
+    console.log(
+        "EVENT TOP LINES:",
+        Dashboard.data
+            ?.tables
+            ?.eventTopLines
+            ?.length || 0
+    );
+
+    console.log(
+        "MISSION TRIPS:",
+        Dashboard.data
+            ?.missionTrips
+    );
+
+    console.log(
+        "MISSION DATA:",
+        Dashboard.missionData
+    );
+
+
+    /*
+       ------------------------------------------------------
+       FINAL STRUCTURE CHECK
+       ------------------------------------------------------
+    */
+
+    const hasDashboardData =
+        Dashboard.data.kpis ||
+        Dashboard.data.tables ||
+        Dashboard.data.missionTrips ||
+        Dashboard.data.averages;
+
+
+    if (!hasDashboardData) {
+
+        throw new Error(
+            "Mission dashboard returned data, but not the expected " +
+            "dashboard structure (kpis / tables / missionTrips / averages)."
+        );
+
+    }
+
 }
 
-
-console.log(
-    "MISSION DATA:",
-    Dashboard.missionData
-);
-
-
-console.log(
-    "DASHBOARD DATA:",
-    Dashboard.data
-);
-
-
-console.log(
-    "PARTICIPANTS:",
-    Dashboard.data?.tables?.participantSummary?.length || 0
-);
-
-
-console.log(
-    "EVENT TOP LINES:",
-    Dashboard.data?.tables?.eventTopLines?.length || 0
-);
-
-
-console.log(
-    "MISSION TRIP DATA:",
-    Dashboard.data?.missionTrips
-);
-
-
-}
 
 /* ==========================================================
 REFRESH
