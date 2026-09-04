@@ -2685,6 +2685,43 @@
 
 </div>
 
+  <div id="migration" class="card hidden pastoral-only">
+
+    <h3>📥 Data Migration</h3>
+
+    <p>Import a Google Form response sheet into the Missions Portal.</p>
+
+    <input
+        id="sheetUrl"
+        placeholder="Paste Google Sheet URL"
+        style="width:100%;padding:8px;">
+
+    <input
+        type="date"
+        id="importEventDate"
+        style="width:100%;padding:8px;margin-top:8px;">
+
+    <select
+        id="importEventType"
+        style="width:100%;padding:8px;margin-top:8px;">
+
+        <option value="FIRESIDE">Fireside Chat</option>
+        <option value="WORKSHOP">Workshop</option>
+        <option value="PRAYER">Prayer Meeting</option>
+        <option value="MISSION">Short Term Mission Trip</option>
+
+    </select>
+
+    <input
+        id="importEventName"
+        placeholder="Event Name"
+        style="width:100%;padding:8px;margin-top:8px;">
+
+    <button onclick="importSheet()">
+        Import Event
+    </button>
+
+</div>
 
 
 <!-- =======================================================
@@ -7045,6 +7082,86 @@ window.CommunicationsCentre = (() => {
 
 })();
 
+async function importSheet() {
+
+    const url = document.getElementById("sheetUrl").value;
+    const eventDate = document.getElementById("importEventDate").value;
+    const eventType = document.getElementById("importEventType").value;
+    const eventName = document.getElementById("importEventName").value;
+
+    const user = JSON.parse(
+        localStorage.getItem("mp_user")
+    );
+
+    if (!url || !eventDate || !eventName) {
+
+        alert("Please complete all fields.");
+        return;
+
+    }
+
+    try {
+
+        let result;
+
+        // =====================================
+        // SHORT TERM MISSION TRIP
+        // =====================================
+        if (eventType === "MISSION") {
+
+            result = await API.post(
+                "importMissionTripSheet",
+                {
+                    url: url,
+                    missionDate: eventDate,
+                    eventName: eventName,
+                    importedBy: user.email
+                }
+            );
+
+        }
+
+        // =====================================
+        // GENERAL EVENTS
+        // =====================================
+        else {
+
+            result = await API.post(
+                "importExternalSheet",
+                {
+                    url: url,
+                    eventDate: eventDate,
+                    eventType: eventType,
+                    eventName: eventName,
+                    importedBy: user.email
+                }
+            );
+
+        }
+
+        console.log(result);
+
+        if (result.success) {
+
+            alert(result.message);
+
+        } else {
+
+            alert(result.message);
+
+        }
+
+    }
+    catch (err) {
+
+        console.error("IMPORT ERROR:", err);
+
+        alert(err.message || "Server error");
+
+    }
+
+}
+  
 </script>
 
 
