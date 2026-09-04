@@ -9738,13 +9738,7 @@ function renderParticipantDirectory() {
                     )}
                 </td>
 
-                <td>
-                    ${escapeHtml(
-                        person.age ??
-                        person.ageGroup ??
-                        "-"
-                    )}
-                </td>
+                
 
                 <td>
                     ${formatNumber(
@@ -9755,25 +9749,12 @@ function renderParticipantDirectory() {
 
                 <td>
                     ${Number(
-                        person.attendanceRate ||
+                        person.missiontrips ||
                         0
-                    )}%
-                </td>
-
-                <td>
-                    ${escapeHtml(
-                        person.leadership ||
-                        "-"
                     )}
                 </td>
 
-                <td>
-                    ${escapeHtml(
-                        person.status ||
-                        "-"
-                    )}
-                </td>
-
+               
             `;
 
 
