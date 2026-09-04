@@ -2900,6 +2900,10 @@
      MISSIONS INTELLIGENCE CENTRE
 ========================================================== -->
 
+<!-- ==========================================================
+     MISSIONS INTELLIGENCE CENTRE
+========================================================== -->
+
 <section
     id="intelligence"
     class="content-section hidden pastoral-only"
@@ -2909,50 +2913,43 @@
          HEADER
     ======================================================= -->
 
-    <div class="card">
+    <div class="topBar">
 
-        <div class="card-body p-4">
+        <div>
+            <h1>
+                🌏 Mission Intelligence Centre
+            </h1>
 
-            <div class="topBar">
+            <p>
+                Mission participation, engagement and journey intelligence.
+            </p>
+        </div>
 
-                <div>
+        <div class="toolbar">
 
-                    <h1>
-                        🌏 Mission Intelligence Centre
-                    </h1>
+            <button
+                type="button"
+                onclick="refreshDashboard()"
+            >
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh
+            </button>
 
-                    <p>
-                        Executive Dashboard for COOS Missions Department
-                    </p>
+            <button
+                type="button"
+                onclick="exportExcel()"
+            >
+                <i class="bi bi-file-earmark-excel"></i>
+                Excel
+            </button>
 
-                </div>
-
-                <div class="toolbar">
-
-                    <button
-                        type="button"
-                        onclick="refreshDashboard()"
-                    >
-                        🔄 Refresh
-                    </button>
-
-                    <button
-                        type="button"
-                        onclick="exportExcel()"
-                    >
-                        📄 Export Excel
-                    </button>
-
-                    <button
-                        type="button"
-                        onclick="exportCSV()"
-                    >
-                        📑 Export CSV
-                    </button>
-
-                </div>
-
-            </div>
+            <button
+                type="button"
+                onclick="exportCSV()"
+            >
+                <i class="bi bi-filetype-csv"></i>
+                CSV
+            </button>
 
         </div>
 
@@ -2960,390 +2957,451 @@
 
 
     <!-- ======================================================
-         KPI SECTION
+         ERROR MESSAGE
     ======================================================= -->
 
-    <section class="kpiSection">
+    <div
+        id="dashboardError"
+        class="hidden"
+    >
+    </div>
+
+
+    <!-- ======================================================
+         KPI SUMMARY
+    ======================================================= -->
+
+    <div class="kpiSection">
+
+        <!-- Registrations -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Registrations</div>
-            <div class="kpiValue" id="kpiRegistrations">0</div>
-            <div class="kpiSubtitle">
-                Total event registrations
+
+            <div class="kpiTitle">
+                Registrations
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiRegistrations"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Participants -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Unique Participants</div>
-            <div class="kpiValue" id="kpiParticipants">0</div>
-            <div class="kpiSubtitle">
-                Unique individuals engaged
+
+            <div class="kpiTitle">
+                Unique Participants
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiParticipants"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Returning -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Returning Participants</div>
-            <div class="kpiValue" id="kpiReturning">0</div>
-            <div class="kpiSubtitle">
-                Attended multiple events
+
+            <div class="kpiTitle">
+                Returning Participants
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiReturning"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- First Timers -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">First-Time Participants</div>
-            <div class="kpiValue" id="kpiFirstTimers">0</div>
-            <div class="kpiSubtitle">
-                New to Missions
+
+            <div class="kpiTitle">
+                First Timers
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiFirstTimers"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Events -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Mission Events</div>
-            <div class="kpiValue" id="kpiEvents">0</div>
-            <div class="kpiSubtitle">
-                Events conducted
+
+            <div class="kpiTitle">
+                Events
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiEvents"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Churches -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Churches Engaged</div>
-            <div class="kpiValue" id="kpiChurches">0</div>
-            <div class="kpiSubtitle">
-                Represented churches
+
+            <div class="kpiTitle">
+                Churches
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiChurches"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Attendance -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Attendance Rate</div>
-            <div class="kpiValue" id="kpiAttendance">0%</div>
-            <div class="kpiSubtitle">
-                Registered vs attended
+
+            <div class="kpiTitle">
+                Attendance Rate
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiAttendance"
+            >
+                0%
+            </div>
+
         </div>
+
+
+        <!-- Average Event -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">Average Event Size</div>
-            <div class="kpiValue" id="kpiAverageEvent">0</div>
-            <div class="kpiSubtitle">
-                Participants per event
+
+            <div class="kpiTitle">
+                Average Event Size
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiAverageEvent"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Mission Trips -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">🌏 Mission Trips Sent</div>
-            <div class="kpiValue" id="kpiMissionTrips">0</div>
-            <div class="kpiSubtitle">
-                Short-term mission deployments
+
+            <div class="kpiTitle">
+                Mission Trips
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiMissionTrips"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Trippers -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">👥 Total Trippers</div>
-            <div class="kpiValue" id="kpiTrippers">0</div>
-            <div class="kpiSubtitle">
-                Unique people sent
+
+            <div class="kpiTitle">
+                Mission Trippers
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiTrippers"
+            >
+                0
+            </div>
+
         </div>
+
+
+        <!-- Average Team -->
 
         <div class="kpiCard">
-            <div class="kpiTitle">📊 Average Team Size</div>
-            <div class="kpiValue" id="kpiAvgTeam">0</div>
-            <div class="kpiSubtitle">
-                Average participants per trip
+
+            <div class="kpiTitle">
+                Average Mission Team
             </div>
+
+            <div
+                class="kpiValue"
+                id="kpiAvgTeam"
+            >
+                0
+            </div>
+
         </div>
 
-    </section>
+    </div>
 
 
     <!-- ======================================================
          FILTERS
     ======================================================= -->
 
-    <section class="card">
+    <div class="card">
 
-        <h2>Filters</h2>
+        <div class="sectionHeader">
+
+            <h2>
+                Filters
+            </h2>
+
+            <p>
+                Filter the entire Intelligence Centre by the selected criteria.
+            </p>
+
+        </div>
+
 
         <div class="filterGrid">
 
+            <!-- Year -->
+
             <div>
-                <label for="filterYear">Year</label>
+
+                <label for="filterYear">
+                    Year
+                </label>
+
                 <select id="filterYear">
-                    <option value="">All Years</option>
+
+                    <option value="">
+                        All Years
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Church -->
+
             <div>
-                <label for="filterChurch">Church</label>
+
+                <label for="filterChurch">
+                    Church
+                </label>
+
                 <select id="filterChurch">
-                    <option value="">All Churches</option>
+
+                    <option value="">
+                        All Churches
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Leadership -->
+
             <div>
-                <label for="filterLeadership">Leadership</label>
+
+                <label for="filterLeadership">
+                    Leadership
+                </label>
+
                 <select id="filterLeadership">
-                    <option value="">All Leadership Levels</option>
+
+                    <option value="">
+                        All
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Status -->
+
             <div>
-                <label for="filterStatus">Participant Status</label>
+
+                <label for="filterStatus">
+                    Status
+                </label>
+
                 <select id="filterStatus">
-                    <option value="">All Participant Status</option>
+
+                    <option value="">
+                        All Statuses
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Event Type -->
+
             <div>
-                <label for="filterEventType">Event Type</label>
+
+                <label for="filterEventType">
+                    Event Type
+                </label>
+
                 <select id="filterEventType">
-                    <option value="">All Event Types</option>
+
+                    <option value="">
+                        All Event Types
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Event -->
+
             <div>
-                <label for="filterEvent">Event</label>
+
+                <label for="filterEvent">
+                    Event
+                </label>
+
                 <select id="filterEvent">
-                    <option value="">All Events</option>
+
+                    <option value="">
+                        All Events
+                    </option>
+
                 </select>
+
             </div>
 
+
+            <!-- Participant Search -->
+
             <div>
+
                 <label for="participantSearch">
-                    Participant Search
+                    Participant
                 </label>
 
                 <input
                     type="text"
                     id="participantSearch"
-                    placeholder="Name, church, mobile or email..."
+                    placeholder="Search participant..."
                 >
+
             </div>
 
-            <div>
-                <label>&nbsp;</label>
+
+            <!-- Reset -->
+
+            <div
+                style="
+                    display:flex;
+                    align-items:end;
+                "
+            >
 
                 <button
                     type="button"
                     id="resetFilters"
                 >
-                    Clear Filters
+                    <i class="bi bi-x-circle"></i>
+                    Reset Filters
                 </button>
 
             </div>
 
         </div>
 
-    </section>
+    </div>
 
 
     <!-- ======================================================
          EVENT TOP LINES
     ======================================================= -->
 
-    <section class="card">
+    <div class="card">
 
-        <h2>📅 Event Top Lines</h2>
+        <div class="sectionHeader">
 
-        <p>
-            Summary of Missions events within the selected filters.
-        </p>
+            <h2>
+                Event Top Lines
+            </h2>
+
+            <p>
+                Event participation summary based on the selected filters.
+            </p>
+
+        </div>
+
 
         <div class="tableWrapper">
 
             <table class="reportTable">
 
                 <thead>
+
                     <tr>
-                        <th>Event Type</th>
-                        <th>Registered</th>
-                        <th>Attended</th>
+
+                        <th>
+                            Event Type
+                        </th>
+
+                        <th>
+                            Registered
+                        </th>
+
+                        <th>
+                            Attended
+                        </th>
+
                     </tr>
+
                 </thead>
 
                 <tbody id="eventTopLinesTable">
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         MISSION TRIP LOCATION SUMMARY
-    ======================================================= -->
-
-    <section class="card">
-
-        <h2>📍 Mission Trip Summary by Location</h2>
-
-        <p>
-            Mission trips grouped by destination.
-        </p>
-
-        <div class="tableWrapper">
-
-            <table class="reportTable">
-
-                <thead>
-                    <tr>
-                        <th>Location</th>
-                        <th>Trips</th>
-                        <th>Total Participants</th>
-                    </tr>
-                </thead>
-
-                <tbody id="missionTripLocationSummaryTable">
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         PARTICIPANT DIRECTORY
-    ======================================================= -->
-
-    <section class="card">
-
-        <h2>👥 Participants</h2>
-
-        <p>
-            Search for a participant and open their missional journey.
-        </p>
-
-        <div class="tableToolbar">
-
-            <input
-                type="text"
-                id="participantTableSearch"
-                placeholder="Search name, church, mobile or email..."
-            >
-
-            <span id="participantResultCount">
-                0 participants
-            </span>
-
-        </div>
-
-        <div class="tableWrapper">
-
-            <table class="reportTable">
-
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Church</th>
-                        <th>Events</th>
-                        <th>Trip</th>
-                    </tr>
-                </thead>
-
-                <tbody id="participantSummaryTable">
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </section>
-
-
-    <!-- ======================================================
-         PARTICIPANT JOURNEY
-    ======================================================= -->
-
-    <div id="participantJourneyPanel">
-
-        <div class="participant-header">
-
-            <h2 id="participantJourneyName">
-                —
-            </h2>
-
-            <div class="participant-contact">
-
-                <div>
-                    <strong>Contact:</strong>
-                    <span id="participantJourneyContact">—</span>
-                </div>
-
-                <div>
-                    <strong>Church:</strong>
-                    <span id="participantJourneyChurch">—</span>
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="participant-engagement">
-
-            <h3>Engagement</h3>
-
-            <div class="engagement-summary">
-
-                <div class="engagement-item">
-
-                    <div class="engagement-label">
-                        Mission Trips
-                    </div>
-
-                    <div
-                        id="participantJourneyMissionTrips"
-                        class="engagement-value"
-                    >
-                        0
-                    </div>
-
-                </div>
-
-                <div class="engagement-item">
-
-                    <div class="engagement-label">
-                        Events
-                    </div>
-
-                    <div
-                        id="participantJourneyEvents"
-                        class="engagement-value"
-                    >
-                        0
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="participant-chronology">
-
-            <h3>
-                Chronological Engagement
-            </h3>
-
-            <table>
-
-                <thead>
 
                     <tr>
-                        <th>Date</th>
-                        <th>Event / Trip</th>
-                        <th>Description</th>
-                        <th>Location</th>
+
+                        <td colspan="3">
+                            No data available.
+                        </td>
+
                     </tr>
 
-                </thead>
-
-                <tbody id="participantJourneyTableBody">
                 </tbody>
 
             </table>
@@ -3354,35 +3412,343 @@
 
 
     <!-- ======================================================
-         DETAILS MODAL
+         MISSION TRIP SUMMARY
+    ======================================================= -->
+
+    <div class="card">
+
+        <div class="sectionHeader">
+
+            <h2>
+                Mission Trip Summary
+            </h2>
+
+            <p>
+                Mission trips grouped by location.
+            </p>
+
+        </div>
+
+
+        <div class="tableWrapper">
+
+            <table class="reportTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Location
+                        </th>
+
+                        <th>
+                            Trips
+                        </th>
+
+                        <th>
+                            Total Participants
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="missionTripLocationSummaryTable">
+
+                    <tr>
+
+                        <td colspan="3">
+                            No mission trip data available.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         PARTICIPANT DIRECTORY
+    ======================================================= -->
+
+    <div class="card">
+
+        <div class="tableToolbar">
+
+            <div>
+
+                <h2>
+                    Participant Directory
+                </h2>
+
+                <span
+                    id="participantResultCount"
+                    class="text-muted"
+                >
+                    0 participants
+                </span>
+
+            </div>
+
+
+            <input
+                type="text"
+                id="participantTableSearch"
+                placeholder="Search participant..."
+            >
+
+        </div>
+
+
+        <div class="tableWrapper">
+
+            <table class="reportTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Name
+                        </th>
+
+                        <th>
+                            Church
+                        </th>
+
+                        <th>
+                            Events
+                        </th>
+
+                        <th>
+                            Mission Trips
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="participantSummaryTable">
+
+                    <tr>
+
+                        <td colspan="4">
+                            No participants found.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================
+         PARTICIPANT DETAILS MODAL
+         
+         IMPORTANT:
+         This is hidden until a participant is clicked.
     ======================================================= -->
 
     <div
         id="detailsModal"
         class="modal hidden"
-        aria-hidden="true"
     >
 
         <div class="modalContent">
 
+
+            <!-- MODAL HEADER -->
+
             <div class="modalHeader">
 
                 <h2 id="modalTitle">
-                    Details
+                    Participant Details
                 </h2>
 
                 <button
                     type="button"
                     class="closeButton"
                     data-close-modal="detailsModal"
+                    aria-label="Close"
                 >
-                    ✕
+                    &times;
                 </button>
 
             </div>
 
+
+            <!-- MODAL BODY -->
+
             <div id="modalBody">
-                Loading...
+
+
+                <!-- PARTICIPANT CONTACT -->
+
+                <div
+                    class="participantInfo"
+                    style="
+                        display:grid;
+                        grid-template-columns:
+                            repeat(
+                                auto-fit,
+                                minmax(220px, 1fr)
+                            );
+                        gap:12px;
+                        margin-bottom:24px;
+                    "
+                >
+
+                    <div>
+
+                        <strong>
+                            Contact:
+                        </strong>
+
+                        <span id="participantJourneyContact">
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <div>
+
+                        <strong>
+                            Church:
+                        </strong>
+
+                        <span id="participantJourneyChurch">
+                            —
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ENGAGEMENT -->
+
+                <div class="sectionHeader">
+
+                    <h3>
+                        Engagement
+                    </h3>
+
+                </div>
+
+
+                <div class="kpiSection">
+
+
+                    <!-- Mission Trips -->
+
+                    <div class="kpiCard">
+
+                        <div class="kpiTitle">
+                            Mission Trips
+                        </div>
+
+                        <div
+                            class="kpiValue"
+                            id="participantJourneyMissionTrips"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+                    <!-- Events -->
+
+                    <div class="kpiCard">
+
+                        <div class="kpiTitle">
+                            Events
+                        </div>
+
+                        <div
+                            class="kpiValue"
+                            id="participantJourneyEvents"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+
+                <!-- CHRONOLOGICAL ENGAGEMENT -->
+
+                <div class="sectionHeader">
+
+                    <h3>
+                        Chronological Engagement
+                    </h3>
+
+                </div>
+
+
+                <div class="tableWrapper">
+
+                    <table class="reportTable">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Date
+                                </th>
+
+                                <th>
+                                    Event / Trip
+                                </th>
+
+                                <th>
+                                    Description
+                                </th>
+
+                                <th>
+                                    Location
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody
+                            id="participantJourneyTableBody"
+                        >
+
+                            <tr>
+
+                                <td colspan="4">
+                                    No engagement history.
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
             </div>
 
         </div>
@@ -3413,17 +3779,26 @@
 
 
     <!-- ======================================================
-         ERROR
+         LAST REFRESH
     ======================================================= -->
 
     <div
-        id="dashboardError"
-        class="hidden"
+        class="text-muted"
+        style="
+            text-align:right;
+            margin-top:12px;
+            font-size:13px;
+        "
     >
+
+        Last refreshed:
+        <span id="lastRefresh">
+            —
+        </span>
+
     </div>
 
 </section>
-
 
   </main>
 
