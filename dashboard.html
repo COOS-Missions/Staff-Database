@@ -2322,32 +2322,66 @@
          DATA MIGRATIONS
     ==================================================== -->
 
-    <section
-      id="migrations"
-      class="content-section hidden intern-only"
+  <section
+    id="migrations"
+    class="content-section hidden intern-only"
+>
+
+    <h3>📥 Data Migration</h3>
+
+    <p>
+        Import a Google Form response sheet into the Missions Portal.
+    </p>
+
+    <input
+        id="sheetUrl"
+        placeholder="Paste Google Sheet URL"
+        style="width:100%;padding:8px;"
     >
 
-      <div class="card">
+    <input
+        type="date"
+        id="importEventDate"
+        style="width:100%;padding:8px;margin-top:8px;"
+    >
 
-        <div class="card-body p-4">
+    <select
+        id="importEventType"
+        style="width:100%;padding:8px;margin-top:8px;"
+    >
 
-          <h4>
+        <option value="FIRESIDE">
+            Fireside Chat
+        </option>
 
-            <i class="bi bi-arrow-repeat"></i>
+        <option value="WORKSHOP">
+            Workshop
+        </option>
 
-            Data Migrations
+        <option value="PRAYER">
+            Prayer Meeting
+        </option>
 
-          </h4>
+        <option value="MISSION">
+            Short Term Mission Trip
+        </option>
 
-          <p class="text-muted">
-            Data migration module.
-          </p>
+    </select>
 
-        </div>
+    <input
+        id="importEventName"
+        placeholder="Event Name"
+        style="width:100%;padding:8px;margin-top:8px;"
+    >
 
-      </div>
+    <button
+        type="button"
+        onclick="importSheet()"
+    >
+        Import Event
+    </button>
 
-    </section>
+</section>
 
 
 
@@ -2685,43 +2719,7 @@
 
 </div>
 
-  <div id="migration" class="card hidden pastoral-only">
-
-    <h3>📥 Data Migration</h3>
-
-    <p>Import a Google Form response sheet into the Missions Portal.</p>
-
-    <input
-        id="sheetUrl"
-        placeholder="Paste Google Sheet URL"
-        style="width:100%;padding:8px;">
-
-    <input
-        type="date"
-        id="importEventDate"
-        style="width:100%;padding:8px;margin-top:8px;">
-
-    <select
-        id="importEventType"
-        style="width:100%;padding:8px;margin-top:8px;">
-
-        <option value="FIRESIDE">Fireside Chat</option>
-        <option value="WORKSHOP">Workshop</option>
-        <option value="PRAYER">Prayer Meeting</option>
-        <option value="MISSION">Short Term Mission Trip</option>
-
-    </select>
-
-    <input
-        id="importEventName"
-        placeholder="Event Name"
-        style="width:100%;padding:8px;margin-top:8px;">
-
-    <button onclick="importSheet()">
-        Import Event
-    </button>
-
-</div>
+  
 
 
 <!-- =======================================================
