@@ -8461,121 +8461,192 @@ window.CommunicationsCentre = (() => {
 
 async function importSheet() {
 
-    console.log("===== IMPORT BUTTON CLICKED =====");
-
     const url =
-        document.getElementById("sheetUrl").value.trim();
+        document.getElementById("sheetUrl")
+            ?.value
+            ?.trim();
 
     const eventDate =
-        document.getElementById("importEventDate").value;
+        document.getElementById("importEventDate")
+            ?.value
+            ?.trim();
 
     const eventType =
-        document.getElementById("importEventType").value;
+        document.getElementById("importEventType")
+            ?.value
+            ?.trim();
 
     const eventName =
-        document.getElementById("importEventName").value.trim();
+        document.getElementById("importEventName")
+            ?.value
+            ?.trim();
 
-
-    const user =
-        JSON.parse(
-            localStorage.getItem("mp_user") || "{}"
-        );
-
-
-    console.log("URL:", url);
-    console.log("Event Date:", eventDate);
-    console.log("Event Type:", eventType);
-    console.log("Event Name:", eventName);
-    console.log("User:", user);
-
-
-    if (!url || !eventDate || !eventName) {
-
-        alert(
-            "Please complete all fields."
-        );
-
+    if (!url) {
+        alert("Please enter the Google Sheet URL.");
         return;
+    }
+
+    if (!eventDate) {
+        alert("Please select the event date.");
+        return;
+    }
+
+    if (!eventName) {
+        alert("Please enter the event name.");
+        return;
+    }
+
+    let user = {};
+
+    try {
+        user =
+            JSON.parse(
+                localStorage.getItem("mp_user") || "{}"
+            );
+    }
+    catch (err) {
+
+        console.warn(
+            "Unable to read mp_user:",
+            err
+        );
 
     }
 
+    const importedBy =
+        user.email ||
+        "";
 
     try {
 
         let result;
 
+        /*
+         * =========================================
+         * MISSION IMPORT
+         * =========================================
+         */
 
-        // =====================================
-        // SHORT TERM MISSION TRIP
-        // =====================================
-
-        if (eventType === "MISSION") {
+        if (
+            String(eventType).toUpperCase() ===
+            "MISSION"
+        ) {
 
             console.log(
-                ">>> CALLING importMissionTripSheet"
+                "IMPORTING MISSION SHEET"
             );
+
+            console.log({
+                action:
+                    "importMissionTripSheet",
+
+                url:
+                    url,
+
+                missionDate:
+                    eventDate,
+
+                eventName:
+                    eventName,
+
+                importedBy:
+                    importedBy
+            });
 
 
             result =
                 await API.post(
                     "importMissionTripSheet",
                     {
-                        url: url,
-                        missionDate: eventDate,
-                        eventName: eventName,
+                        url:
+                            url,
+
+                        missionDate:
+                            eventDate,
+
+                        eventName:
+                            eventName,
+
                         importedBy:
-                            user.email || ""
+                            importedBy
                     }
                 );
 
         }
 
-
-        // =====================================
-        // GENERAL EVENTS
-        // =====================================
+        /*
+         * =========================================
+         * NORMAL EVENT IMPORT
+         * =========================================
+         */
 
         else {
 
             console.log(
-                ">>> CALLING importExternalSheet"
+                "IMPORTING EVENT SHEET"
             );
+
+            console.log({
+                action:
+                    "importExternalSheet",
+
+                url:
+                    url,
+
+                eventDate:
+                    eventDate,
+
+                eventType:
+                    eventType,
+
+                eventName:
+                    eventName,
+
+                importedBy:
+                    importedBy
+            });
 
 
             result =
                 await API.post(
                     "importExternalSheet",
                     {
-                        url: url,
-                        eventDate: eventDate,
-                        eventType: eventType,
-                        eventName: eventName,
+                        url:
+                            url,
+
+                        eventDate:
+                            eventDate,
+
+                        eventType:
+                            eventType,
+
+                        eventName:
+                            eventName,
+
                         importedBy:
-                            user.email || ""
+                            importedBy
                     }
                 );
 
         }
 
 
+        /*
+         * =========================================
+         * HANDLE RESPONSE
+         * =========================================
+         */
+
         console.log(
-            ">>> IMPORT RESULT:",
+            "IMPORT RESULT:",
             result
         );
 
 
-        // =====================================
-        // RESULT
-        // =====================================
-
-        if (
-            result &&
-            result.success
-        ) {
+        if (!result) {
 
             alert(
-                result.message ||
-                "Import completed successfully."
+                "No response received from the server."
             );
 
             return;
@@ -8583,29 +8654,122 @@ async function importSheet() {
         }
 
 
-        alert(
+        if (result.success) {
 
-            result &&
-            result.message
+            let message =
+                result.message ||
+                "Import completed successfully.";
 
-                ? result.message
 
-                : "Import failed."
+            /*
+             * Mission-specific result
+             */
 
-        );
+            if (
+                String(eventType).toUpperCase() ===
+                "MISSION"
+            ) {
+
+                if (
+                    result.tripsCreated !==
+                    undefined
+                ) {
+
+                    message +=
+                        "\n\nTrips created: " +
+                        result.tripsCreated;
+
+                }
+
+
+                if (
+                    result.participantsImported !==
+                    undefined
+                ) {
+
+                    message +=
+                        "\nParticipants imported: " +
+                        result.participantsImported;
+
+                }
+
+            }
+
+
+            /*
+             * Normal event result
+             */
+
+            if (
+                result.importedRows !==
+                undefined
+            ) {
+
+                message +=
+                    "\n\nRows imported: " +
+                    result.importedRows;
+
+            }
+
+
+            alert(message);
+
+
+            /*
+             * Clear URL after successful import
+             */
+
+            const sheetUrl =
+                document.getElementById(
+                    "sheetUrl"
+                );
+
+            if (sheetUrl) {
+
+                sheetUrl.value = "";
+
+            }
+
+
+            /*
+             * Optional refresh
+             *
+             * Keep this only if your page
+             * already has load/import refresh
+             * functions.
+             */
+
+            if (
+                typeof loadEvents ===
+                "function"
+            ) {
+
+                await loadEvents();
+
+            }
+
+        }
+
+        else {
+
+            alert(
+                result.message ||
+                "Import failed."
+            );
+
+        }
 
     }
     catch (err) {
 
         console.error(
-            ">>> IMPORT ERROR:",
+            "IMPORT ERROR:",
             err
         );
 
-
         alert(
-            err.message ||
-            "Server error"
+            err?.message ||
+            "Unable to complete import."
         );
 
     }
