@@ -4262,9 +4262,7 @@ function showSection(id) {
   document
     .querySelectorAll(".content-section")
     .forEach(section => {
-
       section.classList.add("hidden");
-
     });
 
 
@@ -4273,9 +4271,7 @@ function showSection(id) {
 
 
   if (!section) {
-
     return;
-
   }
 
 
@@ -4289,7 +4285,7 @@ function showSection(id) {
     communications: "Communications Centre",
     migrations: "Data Migrations",
     intelligence: "Missions Intelligence Center"
-};
+  };
 
 
   const pageTitle =
@@ -4297,10 +4293,8 @@ function showSection(id) {
 
 
   if (pageTitle) {
-
     pageTitle.textContent =
       titles[id] || "Dashboard";
-
   }
 
 
@@ -4310,18 +4304,8 @@ function showSection(id) {
    */
 
   if (id === "admin") {
-
     loadUsers();
-
   }
-
-  if (id === "events") {
-    EventManagement.init();
-}
-
-  if (id === "communications") {
-    CommunicationsCentre.cinit();
-}
 
 
   /*
@@ -4330,25 +4314,33 @@ function showSection(id) {
    */
 
   if (id === "events") {
-
     EventManagement.init();
-
   }
 
-  if (sectionId === "intelligence") {
+
+  /*
+   * Initialise Communications Centre
+   * when opened.
+   */
+
+  if (id === "communications") {
+    CommunicationsCentre.cinit();
+  }
+
+
+  /*
+   * Initialise Missions Intelligence Centre
+   * only when the section is opened.
+   *
+   * The Intelligence Centre JS is already loaded,
+   * but its data is intentionally loaded lazily.
+   */
+
+  if (id === "intelligence") {
     initIntelligenceCenter();
-}
+  }
 
 }
-
-
-
-/* =========================================================
-   USER DATA
-========================================================= */
-
-window.loadedUsers = [];
-
 
 
 /* =========================================================
