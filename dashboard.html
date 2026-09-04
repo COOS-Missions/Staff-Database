@@ -6223,67 +6223,83 @@ window.CommunicationsCentre = (() => {
         await loadPublicityAudience();
     }
 
-    async function loadPublicityAudience() {
-        if (!selectedEvent) return;
+   async function loadPublicityAudience() {
 
-        try{
+    if (!selectedEvent) return;
 
-       const response = await API.post(
-    "getPublicityAudience",
-    {
-        data: JSON.stringify({
-            spreadsheetId: selectedEvent.spreadsheetId
-        })
-    }
-);
+    try {
+
+        const response = await API.post(
+            "getPublicityAudience",
+            {
+                data: JSON.stringify({
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId
+                })
+            }
+        );
+
+        console.log(
+            "PUBLICITY AUDIENCE RESPONSE:",
+            response
+        );
 
         if (!response.success) {
 
-    console.error(
-        "BACKEND ERROR:",
-        response.message
-    );
+            console.error(
+                "BACKEND ERROR:",
+                response.message
+            );
 
-    throw new Error(
-        response.message ||
-        "Unable to load publicity audience"
-    );
+            throw new Error(
+                response.message ||
+                "Unable to load publicity audience"
+            );
 
-
-
+        }
 
         publicityAudience =
             response.data || [];
 
+        console.log(
+            "PUBLICITY AUDIENCE COUNT:",
+            publicityAudience.length
+        );
 
         publicityAudience =
             deduplicatePeople(
                 publicityAudience
             );
 
+        console.log(
+            "PUBLICITY AUDIENCE AFTER DEDUP:",
+            publicityAudience.length
+        );
 
         renderPublicityAudience();
 
-   } catch (error) {
+    } catch (error) {
 
-    console.error(
-        "loadPublicityAudience ERROR:",
-        error
-    );
-
-    const table =
-        document.getElementById(
-            "ccPublicityTable"
+        console.error(
+            "loadPublicityAudience ERROR:",
+            error
         );
 
-    if (table) {
+        const table =
+            document.getElementById(
+                "ccPublicityTable"
+            );
 
-        table.innerHTML =
-            `<tr>
-                <td colspan="6">
-                    Unable to load publicity audience.
-                </td>
-            </tr>`;
+        if (table) {
+
+            table.innerHTML =
+                `<tr>
+                    <td colspan="6">
+                        Unable to load publicity audience.
+                    </td>
+                </tr>`;
+
+        }
 
     }
 
