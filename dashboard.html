@@ -974,6 +974,513 @@
     -webkit-text-fill-color: #000000 !important;
 }
 
+    /* ==========================================================
+   MISSIONS INTELLIGENCE CENTRE
+   Integrated into dashboard.html
+========================================================== */
+
+/* ----------------------------------------------------------
+   INTELLIGENCE CONTAINER
+---------------------------------------------------------- */
+
+#intelligence {
+    --intel-primary: #2563eb;
+    --intel-success: #16a34a;
+    --intel-warning: #d97706;
+    --intel-danger: #dc2626;
+    --intel-card: #ffffff;
+    --intel-text: #1f2937;
+    --intel-muted: #6b7280;
+    --intel-border: #e5e7eb;
+    --intel-shadow: 0 4px 16px rgba(0,0,0,.08);
+    --intel-radius: 14px;
+}
+
+
+/* ----------------------------------------------------------
+   HEADER
+---------------------------------------------------------- */
+
+#intelligence .topBar {
+    background: var(--intel-card);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    border-radius: var(--intel-radius);
+    box-shadow: var(--intel-shadow);
+    margin-bottom: 24px;
+}
+
+#intelligence .topBar h1 {
+    font-size: 28px;
+    margin: 0;
+    color: var(--intel-text);
+}
+
+#intelligence .topBar p {
+    color: var(--intel-muted);
+    margin: 6px 0 0;
+}
+
+
+/* ----------------------------------------------------------
+   TOOLBAR
+---------------------------------------------------------- */
+
+#intelligence .toolbar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#intelligence .toolbar button {
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+#intelligence .toolbar button:hover {
+    transform: translateY(-2px);
+    opacity: .9;
+}
+
+
+/* ----------------------------------------------------------
+   INTELLIGENCE CARDS
+---------------------------------------------------------- */
+
+#intelligence .card {
+    background: var(--intel-card);
+    border-radius: var(--intel-radius);
+    box-shadow: var(--intel-shadow);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+#intelligence .card h2 {
+    margin-bottom: 16px;
+}
+
+#intelligence .card h3 {
+    margin-bottom: 14px;
+}
+
+
+/* ----------------------------------------------------------
+   KPI GRID
+---------------------------------------------------------- */
+
+#intelligence .kpiSection {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(180px, 1fr)
+    );
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+#intelligence .kpiCard {
+    background: var(--intel-card);
+    border-radius: var(--intel-radius);
+    box-shadow: var(--intel-shadow);
+    padding: 20px;
+    transition: .2s;
+}
+
+#intelligence .kpiCard:hover {
+    transform: translateY(-3px);
+}
+
+#intelligence .kpiTitle {
+    color: var(--intel-muted);
+    font-size: 14px;
+}
+
+#intelligence .kpiValue {
+    font-size: 32px;
+    font-weight: 700;
+    margin-top: 8px;
+    color: var(--intel-primary);
+}
+
+
+/* ----------------------------------------------------------
+   FILTERS
+---------------------------------------------------------- */
+
+#intelligence .filterGrid {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+#intelligence .filterGrid label {
+    display: block;
+    margin-bottom: 7px;
+    font-weight: 600;
+    color: var(--intel-text);
+}
+
+#intelligence .filterGrid input,
+#intelligence .filterGrid select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--intel-border);
+    background: white;
+}
+
+#intelligence .filterGrid input:focus,
+#intelligence .filterGrid select:focus {
+    outline: none;
+    border-color: var(--intel-primary);
+}
+
+
+/* ----------------------------------------------------------
+   SECTION HEADERS
+---------------------------------------------------------- */
+
+#intelligence .sectionHeader {
+    margin: 30px 0 16px;
+}
+
+#intelligence .sectionHeader h2 {
+    font-size: 24px;
+    margin: 0;
+}
+
+#intelligence .sectionHeader p {
+    color: var(--intel-muted);
+    margin-top: 6px;
+}
+
+
+/* ----------------------------------------------------------
+   TABLE WRAPPER
+---------------------------------------------------------- */
+
+#intelligence .tableWrapper {
+    overflow-x: auto;
+    margin-top: 16px;
+}
+
+
+/* ----------------------------------------------------------
+   REPORT TABLE
+---------------------------------------------------------- */
+
+#intelligence .reportTable {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+#intelligence .reportTable th {
+    background: #f3f4f6;
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--intel-border);
+}
+
+#intelligence .reportTable td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--intel-border);
+}
+
+#intelligence .reportTable tbody tr:hover {
+    background: #f8fafc;
+}
+
+
+/* ----------------------------------------------------------
+   TABLE TOOLBAR
+---------------------------------------------------------- */
+
+#intelligence .tableToolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#intelligence .tableToolbar input {
+    max-width: 320px;
+}
+
+
+/* ----------------------------------------------------------
+   MINI TABLE
+---------------------------------------------------------- */
+
+#intelligence .miniTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#intelligence .miniTable th {
+    background: #f8fafc;
+    padding: 10px;
+    text-align: left;
+}
+
+#intelligence .miniTable td {
+    padding: 10px;
+    border-bottom: 1px solid var(--intel-border);
+}
+
+#intelligence .miniTable tbody tr:hover {
+    background: #f8fafc;
+}
+
+
+/* ----------------------------------------------------------
+   PARTICIPANT DIRECTORY
+---------------------------------------------------------- */
+
+#intelligence #participantSummaryTable tr {
+    cursor: pointer;
+}
+
+#intelligence #participantSummaryTable tr:hover {
+    background: #f8fafc;
+}
+
+
+/* ----------------------------------------------------------
+   PARTICIPANT JOURNEY
+---------------------------------------------------------- */
+
+#intelligence #participantJourneyPanel {
+    margin-top: 24px;
+}
+
+#intelligence #participantJourneyName {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+#intelligence #participantJourneyContact,
+#intelligence #participantJourneyChurch {
+    color: var(--intel-muted);
+}
+
+
+/* ----------------------------------------------------------
+   MODAL
+---------------------------------------------------------- */
+
+#intelligence .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#intelligence .modalContent {
+    width: min(900px, 95%);
+    max-height: 90vh;
+    background: white;
+    border-radius: 16px;
+    box-shadow: var(--intel-shadow);
+    overflow: hidden;
+}
+
+#intelligence .modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--intel-border);
+}
+
+#intelligence .modalHeader h2 {
+    margin: 0;
+}
+
+#intelligence #modalBody {
+    padding: 22px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+#intelligence .closeButton {
+    background: none;
+    border: none;
+    color: var(--intel-muted);
+    font-size: 22px;
+    cursor: pointer;
+}
+
+#intelligence .closeButton:hover {
+    color: var(--intel-danger);
+}
+
+
+/* ----------------------------------------------------------
+   LOADING OVERLAY
+---------------------------------------------------------- */
+
+#intelligence .loadingOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+#intelligence .loadingCard {
+    background: white;
+    padding: 30px 40px;
+    border-radius: 16px;
+    box-shadow: var(--intel-shadow);
+    text-align: center;
+}
+
+#intelligence .loader {
+    width: 46px;
+    height: 46px;
+    border: 5px solid #e5e7eb;
+    border-top: 5px solid var(--intel-primary);
+    border-radius: 50%;
+    animation: intelligenceSpin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+#intelligence .loadingText {
+    color: var(--intel-muted);
+}
+
+@keyframes intelligenceSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* ----------------------------------------------------------
+   STATUS BADGES
+---------------------------------------------------------- */
+
+#intelligence .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#intelligence .badge-success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+#intelligence .badge-warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+#intelligence .badge-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+#intelligence .badge-info {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+
+/* ----------------------------------------------------------
+   ERROR MESSAGE
+---------------------------------------------------------- */
+
+#intelligence #dashboardError {
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+
+/* ----------------------------------------------------------
+   RESPONSIVE
+---------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+    #intelligence .topBar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    #intelligence .toolbar {
+        width: 100%;
+    }
+
+    #intelligence .toolbar button {
+        flex: 1;
+    }
+
+}
+
+@media (max-width: 768px) {
+
+    #intelligence .kpiSection {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    #intelligence .filterGrid {
+        grid-template-columns: 1fr;
+    }
+
+    #intelligence .tableToolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #intelligence .tableToolbar input {
+        max-width: none;
+    }
+
+}
+
+@media (max-width: 500px) {
+
+    #intelligence .kpiSection {
+        grid-template-columns: 1fr;
+    }
+
+    #intelligence .card {
+        padding: 16px;
+    }
+
+    #intelligence .topBar {
+        padding: 16px;
+    }
+
+}
+
   </style>
 
 </head>
