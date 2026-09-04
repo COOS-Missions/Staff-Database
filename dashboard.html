@@ -8461,79 +8461,152 @@ window.CommunicationsCentre = (() => {
 
 async function importSheet() {
 
-    const url = document.getElementById("sheetUrl").value;
-    const eventDate = document.getElementById("importEventDate").value;
-    const eventType = document.getElementById("importEventType").value;
-    const eventName = document.getElementById("importEventName").value;
+    console.log("===== IMPORT BUTTON CLICKED =====");
 
-    const user = JSON.parse(
-        localStorage.getItem("mp_user")
-    );
+    const url =
+        document.getElementById("sheetUrl").value.trim();
+
+    const eventDate =
+        document.getElementById("importEventDate").value;
+
+    const eventType =
+        document.getElementById("importEventType").value;
+
+    const eventName =
+        document.getElementById("importEventName").value.trim();
+
+
+    const user =
+        JSON.parse(
+            localStorage.getItem("mp_user") || "{}"
+        );
+
+
+    console.log("URL:", url);
+    console.log("Event Date:", eventDate);
+    console.log("Event Type:", eventType);
+    console.log("Event Name:", eventName);
+    console.log("User:", user);
+
 
     if (!url || !eventDate || !eventName) {
 
-        alert("Please complete all fields.");
+        alert(
+            "Please complete all fields."
+        );
+
         return;
 
     }
+
 
     try {
 
         let result;
 
+
         // =====================================
         // SHORT TERM MISSION TRIP
         // =====================================
+
         if (eventType === "MISSION") {
 
-            result = await API.post(
-                "importMissionTripSheet",
-                {
-                    url: url,
-                    missionDate: eventDate,
-                    eventName: eventName,
-                    importedBy: user.email
-                }
+            console.log(
+                ">>> CALLING importMissionTripSheet"
             );
 
+
+            result =
+                await API.post(
+                    "importMissionTripSheet",
+                    {
+                        url: url,
+                        missionDate: eventDate,
+                        eventName: eventName,
+                        importedBy:
+                            user.email || ""
+                    }
+                );
+
         }
+
 
         // =====================================
         // GENERAL EVENTS
         // =====================================
+
         else {
 
-            result = await API.post(
-                "importExternalSheet",
-                {
-                    url: url,
-                    eventDate: eventDate,
-                    eventType: eventType,
-                    eventName: eventName,
-                    importedBy: user.email
-                }
+            console.log(
+                ">>> CALLING importExternalSheet"
             );
 
+
+            result =
+                await API.post(
+                    "importExternalSheet",
+                    {
+                        url: url,
+                        eventDate: eventDate,
+                        eventType: eventType,
+                        eventName: eventName,
+                        importedBy:
+                            user.email || ""
+                    }
+                );
+
         }
 
-        console.log(result);
 
-        if (result.success) {
+        console.log(
+            ">>> IMPORT RESULT:",
+            result
+        );
 
-            alert(result.message);
 
-        } else {
+        // =====================================
+        // RESULT
+        // =====================================
 
-            alert(result.message);
+        if (
+            result &&
+            result.success
+        ) {
+
+            alert(
+                result.message ||
+                "Import completed successfully."
+            );
+
+            return;
 
         }
+
+
+        alert(
+
+            result &&
+            result.message
+
+                ? result.message
+
+                : "Import failed."
+
+        );
 
     }
     catch (err) {
 
-        console.error("IMPORT ERROR:", err);
+        console.error(
+            ">>> IMPORT ERROR:",
+            err
+        );
 
-        alert(err.message || "Server error");
+
+        alert(
+            err.message ||
+            "Server error"
+        );
 
     }
 
