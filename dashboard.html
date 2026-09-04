@@ -4335,6 +4335,10 @@ function showSection(id) {
 
   }
 
+  if (sectionId === "intelligence") {
+    initIntelligenceCenter();
+}
+
 }
 
 
@@ -8542,6 +8546,4972 @@ async function importSheet() {
     }
 
 }
+
+  <script>
+
+/* ==========================================================
+   MISSIONS INTELLIGENCE CENTRE
+   EMBEDDED VERSION FOR dashboard.html
+
+   IMPORTANT
+   ----------------------------------------------------------
+   This version is designed to live INSIDE dashboard.html.
+
+   It does NOT automatically call the API on page load.
+
+   Start it with:
+
+       initIntelligenceCenter();
+
+   The dashboard navigation should call that when the
+   "intelligence" section is opened.
+
+   PRIMARY API
+   ----------------------------------------------------------
+   API.post("getMissionDashboard", filters)
+
+   Participant journey:
+   API.post("getParticipantDetails", { identifier })
+
+   ========================================================== */
+
+
+/* ==========================================================
+   INTELLIGENCE STATE
+========================================================== */
+
+const Dashboard = {
+
+    data: null,
+
+    missionData: null,
+
+    serverFilters: {},
+
+    rawData: [],
+
+    filteredParticipants: [],
+
+    filteredEventSummary: [],
+
+    filteredEventTopLines: [],
+
+    filteredMissionTrips: [],
+
+    charts: {},
+
+    s: {},
+
+    filters: {
+
+        year: "",
+
+        startDate: "",
+
+        endDate: ""
+
+    },
+
+    initialised: false,
+
+    loading: false,
+
+    uiBound: false,
+
+    filtersBound: false,
+
+    participantSearchTimer: null
+
+};
+
+
+/* ==========================================================
+   CONSOLE
+========================================================== */
+
+console.log(
+    "Missions Intelligence Centre loaded."
+);
+
+
+/* ==========================================================
+   BASIC DOM HELPER
+========================================================== */
+
+function intelElement(id) {
+
+    return document.getElementById(id);
+
+}
+
+
+/* ==========================================================
+   INITIALISE INTELLIGENCE CENTRE
+========================================================== */
+
+async function initIntelligenceCenter(force = false) {
+
+    const section =
+        document.getElementById("intelligence");
+
+    if (!section) {
+
+        console.warn(
+            "Intelligence section not found."
+        );
+
+        return;
+
+    }
+
+
+    /*
+       Do not reload if already loaded.
+    */
+
+    if (
+        Dashboard.initialised &&
+        !force
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+       Prevent duplicate simultaneous loads.
+    */
+
+    if (Dashboard.loading) {
+
+        return;
+
+    }
+
+
+    Dashboard.loading = true;
+
+
+    try {
+
+        showIntelligenceLoading(
+            true,
+            force
+                ? "Refreshing Mission Intelligence..."
+                : "Loading Mission Intelligence..."
+        );
+
+
+        clearIntelligenceError();
+
+
+        await loadDashboard();
+
+
+        /*
+           Prepare local filtered collections.
+        */
+
+        Dashboard.filteredParticipants =
+            getParticipantRows();
+
+
+        Dashboard.filteredEventSummary =
+            getEventSummaryRows();
+
+
+        Dashboard.filteredEventTopLines =
+            getEventTopLineRows();
+
+
+        Dashboard.filteredMissionTrips =
+            getMissionTripRows();
+
+
+        /*
+           Build filters once data exists.
+        */
+
+        initialiseFilters();
+
+
+        /*
+           Bind buttons / modals / searches.
+        */
+
+        bindDashboardUI();
+
+
+        /*
+           Render dashboard.
+        */
+
+        renderDashboard();
+
+
+        updateLastRefresh();
+
+
+        Dashboard.initialised =
+            true;
+
+
+        console.log(
+            "Missions Intelligence Centre ready."
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "INTELLIGENCE CENTRE INITIALISATION ERROR:",
+            error
+        );
+
+
+        showIntelligenceError(
+            error.message ||
+            "Unable to load Mission Intelligence."
+        );
+
+    }
+
+    finally {
+
+        Dashboard.loading = false;
+
+        showIntelligenceLoading(
+            false
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   LOAD DASHBOARD
+========================================================== */
+
+async function loadDashboard() {
+
+    console.log(
+        "=== INTELLIGENCE API START ==="
+    );
+
+
+    /*
+       IMPORTANT:
+       Only ONE dashboard API call.
+    */
+
+    const result =
+        await API.post(
+            "getMissionDashboard",
+            Dashboard.filters
+        );
+
+
+    console.log(
+        "=== INTELLIGENCE API COMPLETED ==="
+    );
+
+
+    console.log(
+        "RESULT:",
+        result
+    );
+
+
+    if (
+        !result ||
+        result.success === false
+    ) {
+
+        throw new Error(
+            result?.message ||
+            "Unable to load mission dashboard."
+        );
+
+    }
+
+
+    const payload =
+        result.data || {};
+
+
+    /*
+       Server filter options
+    */
+
+    Dashboard.serverFilters =
+        payload.filters || {};
+
+
+    /*
+       Main dashboard object
+    */
+
+    Dashboard.data =
+        payload.dashboard ||
+        payload;
+
+
+    if (!Dashboard.data) {
+
+        throw new Error(
+            "Mission dashboard data was not returned."
+        );
+
+    }
+
+
+    /*
+       Mission trip data
+    */
+
+    Dashboard.missionData =
+        payload.missionData ||
+        Dashboard.data.missionTrips ||
+        null;
+
+
+    /*
+       Raw rows if supplied by backend.
+    */
+
+    Dashboard.rawData =
+        Dashboard.data.rawData ||
+        Dashboard.data.rows ||
+        payload.rawData ||
+        [];
+
+
+    if (!Array.isArray(Dashboard.rawData)) {
+
+        Dashboard.rawData = [];
+
+    }
+
+
+    console.log(
+        "MISSION DATA:",
+        Dashboard.missionData
+    );
+
+
+    console.log(
+        "DASHBOARD DATA:",
+        Dashboard.data
+    );
+
+
+    console.log(
+        "RAW DATA ROWS:",
+        Dashboard.rawData.length
+    );
+
+}
+
+
+/* ==========================================================
+   REFRESH
+========================================================== */
+
+async function refreshDashboard() {
+
+    await initIntelligenceCenter(
+        true
+    );
+
+}
+
+
+/*
+   Compatibility alias
+*/
+
+window.refreshIntelligenceCenter =
+    refreshDashboard;
+
+
+/* ==========================================================
+   MAIN RENDER
+========================================================== */
+
+function renderDashboard() {
+
+    if (!Dashboard.data)
+        return;
+
+
+    /*
+       KPIs
+    */
+
+    renderKPIs();
+
+
+    /*
+       Executive information
+    */
+
+    renderExecutiveSummary();
+
+
+    /*
+       Mission insights
+    */
+
+    renderMissionInsights();
+
+
+    /*
+       Event top lines
+    */
+
+    renderEventTopLines();
+
+
+    /*
+       Mission trip summary
+    */
+
+    renderMissionTripSummary();
+
+
+    renderMissionTripLocationSummary();
+
+
+    /*
+       Participants
+    */
+
+    renderParticipants();
+
+    renderParticipantDirectory();
+
+
+    /*
+       Existing event summary
+    */
+
+    renderEvent();
+
+    renderEventSummaryTable();
+
+
+    /*
+       These functions are harmless compatibility
+       wrappers for older HTML.
+    */
+
+    renderChurches();
+
+    renderLeadership();
+
+
+    /*
+       NO CHARTS.
+    */
+
+
+    updateFilterResultCount();
+
+}
+
+
+/* ==========================================================
+   KPI RENDERING
+========================================================== */
+
+function renderKPIs() {
+
+    const k =
+        Dashboard.data?.kpis;
+
+    if (!k)
+        return;
+
+
+    setText(
+        "kpiRegistrations",
+        formatNumber(
+            k.registrations
+        )
+    );
+
+
+    setText(
+        "kpiParticipants",
+        formatNumber(
+            k.uniqueParticipants
+        )
+    );
+
+
+    setTextMultiple(
+        [
+            "kpiReturning",
+            "kpiRepeat",
+            "kpiRepeatParticipants"
+        ],
+        formatNumber(
+            k.repeatParticipants
+        )
+    );
+
+
+    setText(
+        "kpiFirstTimers",
+        formatNumber(
+            k.firstTimers
+        )
+    );
+
+
+    setText(
+        "kpiEvents",
+        formatNumber(
+            k.totalEvents
+        )
+    );
+
+
+    setText(
+        "kpiChurches",
+        formatNumber(
+            k.totalChurches
+        )
+    );
+
+
+    setText(
+        "kpiAttendance",
+        `${Number(
+            k.attendanceRate || 0
+        )}%`
+    );
+
+
+    setText(
+        "kpiGrowth",
+        formatGrowth(
+            k.growthRate
+        )
+    );
+
+
+    /*
+       IMPORTANT:
+       Previous code could throw if averages
+       did not exist.
+
+       This version is safe.
+    */
+
+    const averageEventSize =
+        Dashboard.data?.averages?.average ||
+        Dashboard.data?.events?.averages?.average ||
+        0;
+
+
+    setText(
+        "kpiAverageEvent",
+        formatNumber(
+            averageEventSize
+        )
+    );
+
+
+    /*
+       Mission Health
+    */
+
+    setTextMultiple(
+        [
+            "missionHealthScore",
+            "kpiMissionHealth"
+        ],
+        k.missionHealthScore ?? 0
+    );
+
+
+    setTextMultiple(
+        [
+            "missionHealthStatus",
+            "kpiMissionHealthStatus"
+        ],
+        k.missionHealthStatus ||
+        "Unknown"
+    );
+
+
+    setText(
+        "missionHealthDescription",
+        k.missionHealthDescription ||
+        ""
+    );
+
+
+    updateMissionHealthClass(
+        k.missionHealthStatus
+    );
+
+
+    /*
+       Mission Trip KPIs
+    */
+
+    const missionData =
+        Dashboard.missionData ||
+        Dashboard.data?.missionTrips ||
+        {};
+
+
+    const missionSummary =
+        missionData.summary || {};
+
+
+    /*
+       Your current backend can return:
+
+       summary.data.totalTrips
+
+       therefore support both structures.
+    */
+
+    const mission =
+        missionSummary.data ||
+        missionSummary ||
+        {};
+
+
+    setText(
+        "kpiMissionTrips",
+        formatNumber(
+            mission.totalTrips || 0
+        )
+    );
+
+
+    setText(
+        "kpiTrippers",
+        formatNumber(
+            mission.uniqueMissionaries || 0
+        )
+    );
+
+
+    setText(
+        "kpiAvgTeam",
+        formatNumber(
+            mission.averageParticipants || 0
+        )
+    );
+
+}
+
+
+/* ==========================================================
+   EXECUTIVE SUMMARY
+========================================================== */
+
+function renderExecutiveSummary() {
+
+    const executive =
+        Dashboard.data?.executive;
+
+    if (!executive)
+        return;
+
+
+    setText(
+        "executiveTitle",
+        executive.title ||
+        "Mission Intelligence"
+    );
+
+
+    renderList(
+        "executiveOverview",
+        executive.overview || []
+    );
+
+
+    const highlights =
+        executive.highlights ||
+        {};
+
+
+    setTextMultiple(
+        [
+            "highlightTopChurch",
+            "topChurch"
+        ],
+        highlights.topChurch ||
+        "N/A"
+    );
+
+
+    setTextMultiple(
+        [
+            "highlightTopEvent",
+            "topEvent"
+        ],
+        highlights.topEvent ||
+        "N/A"
+    );
+
+
+    setTextMultiple(
+        [
+            "highlightTopReferral",
+            "topReferral"
+        ],
+        highlights.topReferral ||
+        "N/A"
+    );
+
+
+    setTextMultiple(
+        [
+            "highlightLatestEvent",
+            "latestEvent"
+        ],
+        highlights.newestEvent ||
+        highlights.latestEvent ||
+        "N/A"
+    );
+
+
+    setTextMultiple(
+        [
+            "highlightMissionHealth",
+            "missionHealth"
+        ],
+        highlights.missionHealth ||
+        "N/A"
+    );
+
+
+    renderStrategicCorner();
+
+}
+
+
+/* ==========================================================
+   STRATEGIC CORNER
+========================================================== */
+
+function renderStrategicCorner() {
+
+    const executive =
+        Dashboard.data?.executive;
+
+
+    const container =
+        document.getElementById(
+            "missionIntelligence"
+        );
+
+
+    if (
+        !container ||
+        !executive
+    )
+        return;
+
+
+    if (
+        executive.healthScore === undefined &&
+        !executive.healthDescriptor &&
+        !executive.topChurch &&
+        !executive.topEvent
+    )
+        return;
+
+
+    container.innerHTML = "";
+
+
+    addPastorCard(
+        container,
+        "Mission Health",
+        executive.healthScore !== undefined
+            ? `${executive.healthScore}/100`
+            : "N/A"
+    );
+
+
+    addPastorCard(
+        container,
+        "Mission Stage",
+        executive.healthDescriptor ||
+        "N/A"
+    );
+
+
+    addPastorCard(
+        container,
+        "Highest Participation",
+        executive.topChurch ||
+        "N/A"
+    );
+
+
+    addPastorCard(
+        container,
+        "Most Popular Event",
+        executive.topEvent ||
+        "N/A"
+    );
+
+
+    addPastorCard(
+        container,
+        "Repeat Missionaries",
+        executive.repeatParticipants ??
+        Dashboard.data?.kpis?.repeatParticipants ??
+        0
+    );
+
+}
+
+
+/* ==========================================================
+   MISSION INSIGHTS
+========================================================== */
+
+function renderMissionInsights() {
+
+    const insights =
+        Dashboard.data?.missionInsights ||
+        {};
+
+
+    renderInsightGroup(
+        "celebrateInsights",
+        insights.celebrate
+    );
+
+
+    renderInsightGroup(
+        "insightCelebrate",
+        insights.celebrate
+    );
+
+
+    renderInsightGroup(
+        "warningInsights",
+        insights.warning
+    );
+
+
+    renderInsightGroup(
+        "insightWarning",
+        insights.warning
+    );
+
+
+    renderInsightGroup(
+        "followupInsights",
+        insights.warning
+    );
+
+
+    renderInsightGroup(
+        "recommendationInsights",
+        insights.recommendation
+    );
+
+
+    renderInsightGroup(
+        "insightRecommendation",
+        insights.recommendation
+    );
+
+
+    renderInsightGroup(
+        "opportunityInsights",
+        insights.recommendation
+    );
+
+
+    renderInsightGroup(
+        "riskInsights",
+        insights.risk
+    );
+
+
+    renderInsightGroup(
+        "insightRisk",
+        insights.risk
+    );
+
+}
+
+
+/* ==========================================================
+   INSIGHT GROUP
+========================================================== */
+
+function renderInsightGroup(
+    elementId,
+    items
+) {
+
+    const container =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!container)
+        return;
+
+
+    container.innerHTML = "";
+
+
+    if (
+        !Array.isArray(items) ||
+        !items.length
+    ) {
+
+        container.innerHTML =
+            `<div class="empty-state">
+                No insights available.
+             </div>`;
+
+        return;
+
+    }
+
+
+    items.forEach(
+        item => {
+
+            const div =
+                document.createElement(
+                    "div"
+                );
+
+
+            div.className =
+                "missionInsight insightItem";
+
+
+            div.textContent =
+                item;
+
+
+            container.appendChild(
+                div
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   DATA GETTERS
+========================================================== */
+
+function getParticipantRows() {
+
+    return Array.isArray(
+        Dashboard.data
+            ?.tables
+            ?.participantSummary
+    )
+        ? Dashboard.data.tables.participantSummary
+        : [];
+
+}
+
+
+function getEventSummaryRows() {
+
+    return Array.isArray(
+        Dashboard.data
+            ?.tables
+            ?.eventSummary
+    )
+        ? Dashboard.data.tables.eventSummary
+        : [];
+
+}
+
+
+function getEventTopLineRows() {
+
+    return Array.isArray(
+        Dashboard.data
+            ?.tables
+            ?.eventTopLines
+    )
+        ? Dashboard.data.tables.eventTopLines
+        : [];
+
+}
+
+
+function getMissionTripRows() {
+
+    const trips =
+        Dashboard.missionData
+            ?.summary
+            ?.trips ||
+        Dashboard.data
+            ?.missionTrips
+            ?.summary
+            ?.trips ||
+        [];
+
+
+    return Array.isArray(trips)
+        ? trips
+        : [];
+
+}
+
+
+/* ==========================================================
+   PARTICIPANTS
+========================================================== */
+
+function renderParticipants() {
+
+    if (
+        !Array.isArray(
+            Dashboard.filteredParticipants
+        )
+    ) {
+
+        Dashboard.filteredParticipants =
+            getParticipantRows();
+
+    }
+
+
+    updateFilterResultCount();
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT DIRECTORY
+========================================================== */
+
+function renderParticipantDirectory() {
+
+    const tbody =
+        document.getElementById(
+            "participantSummaryTable"
+        ) ||
+        document.getElementById(
+            "participantTableBody"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    let people =
+        Array.isArray(
+            Dashboard.filteredParticipants
+        )
+            ? Dashboard.filteredParticipants
+            : getParticipantRows();
+
+
+    /*
+       Table search
+    */
+
+    const searchElement =
+        document.getElementById(
+            "participantTableSearch"
+        );
+
+
+    const tableSearch =
+        String(
+            searchElement?.value ||
+            ""
+        )
+        .trim()
+        .toLowerCase();
+
+
+    if (tableSearch) {
+
+        people =
+            people.filter(
+                person =>
+                    participantMatchesSearch(
+                        person,
+                        tableSearch
+                    )
+            );
+
+    }
+
+
+    /*
+       Sort A-Z
+    */
+
+    const sorted =
+        [...people].sort(
+            (a, b) =>
+                String(
+                    a.name || ""
+                )
+                .localeCompare(
+                    String(
+                        b.name || ""
+                    ),
+                    undefined,
+                    {
+                        sensitivity:
+                            "base"
+                    }
+                )
+        );
+
+
+    if (!sorted.length) {
+
+        renderEmptyRow(
+            tbody,
+            7,
+            "No participants found."
+        );
+
+        updateFilterResultCount(
+            people.length
+        );
+
+        return;
+
+    }
+
+
+    sorted.forEach(
+        person => {
+
+            const tr =
+                document.createElement(
+                    "tr"
+                );
+
+
+            const identifier =
+                getParticipantIdentifier(
+                    person
+                );
+
+
+            tr.innerHTML = `
+
+                <td>
+
+                    <button
+                        type="button"
+                        class="participant-link"
+                    >
+                        ${escapeHtml(
+                            person.name ||
+                            "Unnamed"
+                        )}
+                    </button>
+
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        person.church ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        person.age ??
+                        person.ageGroup ??
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        person.events ||
+                        0
+                    )}
+                </td>
+
+                <td>
+                    ${Number(
+                        person.attendanceRate ||
+                        0
+                    )}%
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        person.leadership ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        person.status ||
+                        "-"
+                    )}
+                </td>
+
+            `;
+
+
+            const button =
+                tr.querySelector(
+                    ".participant-link"
+                );
+
+
+            if (button) {
+
+                button.addEventListener(
+                    "click",
+                    event => {
+
+                        event.stopPropagation();
+
+                        openParticipantJourney(
+                            identifier
+                        );
+
+                    }
+                );
+
+            }
+
+
+            tr.style.cursor =
+                "pointer";
+
+
+            tr.addEventListener(
+                "click",
+                () => {
+
+                    openParticipantJourney(
+                        identifier
+                    );
+
+                }
+            );
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        }
+    );
+
+
+    updateFilterResultCount(
+        people.length
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT SEARCH MATCH
+========================================================== */
+
+function participantMatchesSearch(
+    person,
+    search
+) {
+
+    return [
+
+        person.name,
+
+        person.church,
+
+        person.mobile,
+
+        person.email,
+
+        person.leadership,
+
+        person.status,
+
+        person.age,
+
+        person.ageGroup
+
+    ]
+
+    .filter(Boolean)
+
+    .some(
+        value =>
+            String(value)
+                .toLowerCase()
+                .includes(search)
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT IDENTIFIER
+========================================================== */
+
+function getParticipantIdentifier(
+    person
+) {
+
+    return (
+        person?.personID ||
+        person?.personId ||
+        person?.personKey ||
+        person?.email ||
+        person?.mobile ||
+        person?.name ||
+        ""
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT TABLE SEARCH
+========================================================== */
+
+function setupParticipantTableSearch() {
+
+    const search =
+        document.getElementById(
+            "participantTableSearch"
+        );
+
+
+    if (!search)
+        return;
+
+
+    if (
+        search.dataset.bound ===
+        "true"
+    )
+        return;
+
+
+    search.dataset.bound =
+        "true";
+
+
+    search.addEventListener(
+        "input",
+        debounce(
+            () => {
+
+                renderParticipantDirectory();
+
+            },
+            200
+        )
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT API SEARCH
+========================================================== */
+
+function setupParticipantSearch() {
+
+    const search =
+        document.getElementById(
+            "participantSearch"
+        );
+
+
+    const resultsContainer =
+        document.getElementById(
+            "participantSearchResults"
+        );
+
+
+    if (!search)
+        return;
+
+
+    if (
+        search.dataset.bound ===
+        "true"
+    )
+        return;
+
+
+    search.dataset.bound =
+        "true";
+
+
+    search.addEventListener(
+        "input",
+        debounce(
+            async function () {
+
+                const value =
+                    this.value.trim();
+
+
+                if (!value) {
+
+                    if (
+                        resultsContainer
+                    )
+                        resultsContainer.innerHTML =
+                            "";
+
+                    return;
+
+                }
+
+
+                try {
+
+                    const result =
+                        await API.post(
+                            "searchParticipant",
+                            {
+                                searchTerm:
+                                    value
+                            }
+                        );
+
+
+                    if (
+                        !result ||
+                        result.success === false
+                    ) {
+
+                        throw new Error(
+                            result?.message ||
+                            "Participant search failed."
+                        );
+
+                    }
+
+
+                    const results =
+                        Array.isArray(
+                            result.data
+                        )
+                            ? result.data
+                            : [];
+
+
+                    renderParticipantSearchResults(
+                        results,
+                        resultsContainer
+                    );
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "PARTICIPANT SEARCH ERROR:",
+                        error
+                    );
+
+
+                    if (
+                        resultsContainer
+                    ) {
+
+                        resultsContainer.innerHTML =
+                            `<p>
+                                ${escapeHtml(
+                                    error.message
+                                )}
+                             </p>`;
+
+                    }
+
+                }
+
+            },
+            300
+        )
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT SEARCH RESULTS
+========================================================== */
+
+function renderParticipantSearchResults(
+    results,
+    container
+) {
+
+    if (!container)
+        return;
+
+
+    container.innerHTML = "";
+
+
+    if (!results.length) {
+
+        container.innerHTML =
+            "<p>No participant found.</p>";
+
+        return;
+
+    }
+
+
+    results.forEach(
+        person => {
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.type =
+                "button";
+
+
+            button.className =
+                "participantSearchResult";
+
+
+            button.innerHTML = `
+
+                <strong>
+                    ${escapeHtml(
+                        person.name ||
+                        "Unnamed"
+                    )}
+                </strong>
+
+                <span>
+                    ${escapeHtml(
+                        person.church ||
+                        ""
+                    )}
+                </span>
+
+            `;
+
+
+            button.addEventListener(
+                "click",
+                () => {
+
+                    openParticipantJourney(
+                        getParticipantIdentifier(
+                            person
+                        )
+                    );
+
+                }
+            );
+
+
+            container.appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT JOURNEY
+========================================================== */
+
+async function openParticipantJourney(
+    identifier
+) {
+
+    if (!identifier)
+        return;
+
+
+    showIntelligenceLoading(
+        true,
+        "Loading participant journey..."
+    );
+
+
+    try {
+
+        const response =
+            await API.post(
+                "getParticipantDetails",
+                {
+                    identifier:
+                        identifier
+                }
+            );
+
+
+        const result =
+            response?.data ||
+            response;
+
+
+        if (
+            !result ||
+            result.found === false
+        ) {
+
+            alert(
+                "Participant not found."
+            );
+
+            return;
+
+        }
+
+
+        Dashboard.data =
+            Dashboard.data || {};
+
+
+        Dashboard.data.participantJourney =
+            result;
+
+
+        renderParticipantJourney(
+            result
+        );
+
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "PARTICIPANT JOURNEY ERROR:",
+            error
+        );
+
+
+        alert(
+            error.message ||
+            "Unable to load participant journey."
+        );
+
+    }
+
+    finally {
+
+        showIntelligenceLoading(
+            false
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT JOURNEY
+========================================================== */
+
+function renderParticipantJourney(
+    data
+) {
+
+    if (
+        !data ||
+        data.found === false
+    )
+        return;
+
+
+    const participant =
+        data.participant ||
+        data.person ||
+        {};
+
+
+    const summary =
+        data.summary ||
+        {};
+
+
+    const journal =
+        data.journal ||
+        data.journey ||
+        [];
+
+
+    const name =
+        participant.name ||
+        "—";
+
+
+    const contact =
+        participant.mobile ||
+        participant.email ||
+        "—";
+
+
+    const church =
+        participant.church ||
+        "—";
+
+
+    setText(
+        "participantJourneyName",
+        name
+    );
+
+
+    setText(
+        "participantJourneyContact",
+        contact
+    );
+
+
+    setText(
+        "participantJourneyChurch",
+        church
+    );
+
+
+    setText(
+        "participantJourneyMissionTrips",
+        summary.missionTrips ||
+        0
+    );
+
+
+    setText(
+        "participantJourneyEvents",
+        summary.events ||
+        0
+    );
+
+
+    renderParticipantChronology(
+        Array.isArray(journal)
+            ? journal
+            : []
+    );
+
+
+    const panel =
+        document.getElementById(
+            "participantJourneyPanel"
+        );
+
+
+    if (panel) {
+
+        panel.style.display =
+            "";
+
+    }
+
+
+    /*
+       If a modal exists, display it too.
+    */
+
+    const modal =
+        document.getElementById(
+            "detailsModal"
+        );
+
+
+    if (
+        modal &&
+        modal.classList.contains("hidden")
+    ) {
+
+        renderJourneyModal(
+            data
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT CHRONOLOGY
+========================================================== */
+
+function renderParticipantChronology(
+    journal
+) {
+
+    const tbody =
+        document.getElementById(
+            "participantJourneyTableBody"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    if (
+        !Array.isArray(journal) ||
+        !journal.length
+    ) {
+
+        const row =
+            document.createElement(
+                "tr"
+            );
+
+
+        row.innerHTML = `
+            <td
+                colspan="4"
+                class="empty-state"
+            >
+                No chronological engagement found.
+            </td>
+        `;
+
+
+        tbody.appendChild(
+            row
+        );
+
+
+        return;
+
+    }
+
+
+    /*
+       Sort oldest → newest.
+    */
+
+    const sorted =
+        [...journal].sort(
+            (a, b) => {
+
+                const dateA =
+                    new Date(
+                        a.date || 0
+                    );
+
+
+                const dateB =
+                    new Date(
+                        b.date || 0
+                    );
+
+
+                return (
+                    dateA - dateB
+                );
+
+            }
+        );
+
+
+    sorted.forEach(
+        entry => {
+
+            const row =
+                document.createElement(
+                    "tr"
+                );
+
+
+            const date =
+                entry.displayDate ||
+                formatParticipantJourneyDate(
+                    entry.date
+                ) ||
+                "—";
+
+
+            const eventOrTrip =
+                entry.eventOrTrip ||
+                entry.eventName ||
+                entry.tripName ||
+                "—";
+
+
+            const description =
+                entry.description ||
+                "—";
+
+
+            const location =
+                entry.location ||
+                "—";
+
+
+            row.innerHTML = `
+
+                <td>
+                    ${escapeHtml(
+                        date
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        eventOrTrip
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        description
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        location
+                    )}
+                </td>
+
+            `;
+
+
+            tbody.appendChild(
+                row
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   JOURNEY MODAL
+========================================================== */
+
+function renderJourneyModal(
+    data
+) {
+
+    const modal =
+        document.getElementById(
+            "detailsModal"
+        ) ||
+        document.getElementById(
+            "participantJourneyModal"
+        );
+
+
+    const title =
+        document.getElementById(
+            "modalTitle"
+        );
+
+
+    const body =
+        document.getElementById(
+            "modalBody"
+        );
+
+
+    if (
+        !modal ||
+        !title ||
+        !body
+    )
+        return;
+
+
+    if (
+        !data ||
+        data.found === false
+    ) {
+
+        title.textContent =
+            "Participant Not Found";
+
+
+        body.innerHTML =
+            "<p>No missional journey was found for this participant.</p>";
+
+
+        showModalElement(
+            modal
+        );
+
+
+        return;
+
+    }
+
+
+    const person =
+        data.person ||
+        data.participant ||
+        {};
+
+
+    const summary =
+        data.summary ||
+        {};
+
+
+    const journey =
+        Array.isArray(
+            data.journey
+        )
+            ? data.journey
+            : Array.isArray(data.journal)
+                ? data.journal
+                : [];
+
+
+    title.textContent =
+        "Missional Journey — " +
+        (
+            person.name ||
+            "Participant"
+        );
+
+
+    const sortedJourney =
+        journey
+            .slice()
+            .sort(
+                (a, b) =>
+                    new Date(
+                        a.date || 0
+                    ) -
+                    new Date(
+                        b.date || 0
+                    )
+            );
+
+
+    let entries = "";
+
+
+    sortedJourney.forEach(
+        item => {
+
+            const attended =
+                item.attended === true ||
+                item.attendance === true;
+
+
+            const dateText =
+                item.dateText ||
+                item.displayDate ||
+                formatDate(
+                    item.date
+                );
+
+
+            const eventTitle =
+                item.title ||
+                item.eventName ||
+                item.eventOrTrip ||
+                "Mission engagement";
+
+
+            const eventType =
+                item.eventType ||
+                item.type ||
+                "";
+
+
+            const description =
+                item.description ||
+                "";
+
+
+            const location =
+                item.location ||
+                "";
+
+
+            entries += `
+
+                <div class="journeyEntry">
+
+                    <div class="journeyDate">
+                        ${escapeHtml(
+                            dateText
+                        )}
+                    </div>
+
+                    <div class="journeyContent">
+
+                        <strong>
+                            ${escapeHtml(
+                                eventTitle
+                            )}
+                        </strong>
+
+                        ${
+                            eventType
+                                ? `
+                                    <span
+                                        class="journeyType"
+                                    >
+                                        ${escapeHtml(
+                                            eventType
+                                        )}
+                                    </span>
+                                  `
+                                : ""
+                        }
+
+                        ${
+                            description
+                                ? `
+                                    <p>
+                                        ${escapeHtml(
+                                            description
+                                        )}
+                                    </p>
+                                  `
+                                : ""
+                        }
+
+                        ${
+                            location
+                                ? `
+                                    <small>
+                                        ${escapeHtml(
+                                            location
+                                        )}
+                                    </small>
+                                  `
+                                : ""
+                        }
+
+                        <small>
+                            ${
+                                attended
+                                    ? "Attended"
+                                    : "Registered"
+                            }
+                        </small>
+
+                    </div>
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    if (!entries) {
+
+        entries =
+            "<p>No journey entries.</p>";
+
+    }
+
+
+    const participantHeader = `
+
+        <div
+            class="journeyParticipantHeader"
+        >
+
+            <h3>
+                ${escapeHtml(
+                    person.name ||
+                    "Participant"
+                )}
+            </h3>
+
+            ${
+                person.church
+                    ? `
+                        <p>
+                            ${escapeHtml(
+                                person.church
+                            )}
+                        </p>
+                      `
+                    : ""
+            }
+
+        </div>
+
+    `;
+
+
+    const events =
+        summary.events ??
+        0;
+
+
+    const attended =
+        summary.attended ??
+        0;
+
+
+    const missionTrips =
+        summary.missionTrips ??
+        0;
+
+
+    const totalJourneyEntries =
+        summary.totalJourneyEntries ??
+        journey.length;
+
+
+    const summaryHtml = `
+
+        <div class="journeySummary">
+
+            <div>
+                <strong>
+                    ${escapeHtml(events)}
+                </strong>
+
+                <span>
+                    Events
+                </span>
+            </div>
+
+            <div>
+                <strong>
+                    ${escapeHtml(attended)}
+                </strong>
+
+                <span>
+                    Attended
+                </span>
+            </div>
+
+            <div>
+                <strong>
+                    ${escapeHtml(missionTrips)}
+                </strong>
+
+                <span>
+                    Mission Trips
+                </span>
+            </div>
+
+            <div>
+                <strong>
+                    ${escapeHtml(
+                        totalJourneyEntries
+                    )}
+                </strong>
+
+                <span>
+                    Journey Entries
+                </span>
+            </div>
+
+        </div>
+
+    `;
+
+
+    body.innerHTML =
+        participantHeader +
+        summaryHtml +
+        `
+            <div class="journeyTimeline">
+                ${entries}
+            </div>
+        `;
+
+
+    showModalElement(
+        modal
+    );
+
+}
+
+
+/* ==========================================================
+   EVENT SUMMARY
+========================================================== */
+
+function renderEventSummaryTable() {
+
+    const tbody =
+        document.getElementById(
+            "eventSummaryTableBody"
+        ) ||
+        document.getElementById(
+            "eventSummaryTable"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    const events =
+        Dashboard.filteredEventSummary ||
+        getEventSummaryRows();
+
+
+    if (!events.length) {
+
+        renderEmptyRow(
+            tbody,
+            10,
+            "No event data available."
+        );
+
+        return;
+
+    }
+
+
+    events.forEach(
+        event => {
+
+            const tr =
+                document.createElement(
+                    "tr"
+                );
+
+
+            tr.innerHTML = `
+
+                <td>
+                    ${formatDate(
+                        event.date
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        event.event ||
+                        ""
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        event.type ||
+                        ""
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.registered
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.attended
+                    )}
+                </td>
+
+                <td>
+                    ${Number(
+                        event.attendance ||
+                        0
+                    )}%
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.firstTimers
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.repeat
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.churches
+                    )}
+                </td>
+
+                <td>
+
+                    <span class="
+                        status-badge
+                        ${getStatusClass(
+                            event.status
+                        )}
+                    ">
+                        ${escapeHtml(
+                            event.status ||
+                            ""
+                        )}
+                    </span>
+
+                </td>
+
+            `;
+
+
+            tr.style.cursor =
+                "pointer";
+
+
+            tr.addEventListener(
+                "click",
+                () =>
+                    openEventDetails(
+                        event.event ||
+                        event.eventName
+                    )
+            );
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   EVENT
+========================================================== */
+
+function renderEvent() {
+
+    const events =
+        Dashboard.data?.events;
+
+
+    if (!events)
+        return;
+
+
+    setText(
+        "averageAttendance",
+        events.averages?.average ||
+        0
+    );
+
+}
+
+
+/* ==========================================================
+   EVENT DETAILS
+========================================================== */
+
+async function openEventDetails(
+    eventName
+) {
+
+    if (!eventName)
+        return;
+
+
+    showIntelligenceLoading(
+        true,
+        "Loading event details..."
+    );
+
+
+    try {
+
+        const result =
+            await API.post(
+                "getEventDetails",
+                {
+                    eventName:
+                        eventName,
+
+                    event:
+                        eventName
+                }
+            );
+
+
+        if (
+            !result ||
+            result.success === false
+        ) {
+
+            throw new Error(
+                result?.message ||
+                "Unable to load event details."
+            );
+
+        }
+
+
+        showDetailsModal(
+            eventName,
+            result.data
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "EVENT DETAILS ERROR:",
+            error
+        );
+
+
+        showIntelligenceError(
+            error.message ||
+            "Unable to load event details."
+        );
+
+    }
+
+    finally {
+
+        showIntelligenceLoading(
+            false
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   EVENT TOP LINES
+========================================================== */
+
+function renderEventTopLines() {
+
+    const tbody =
+        document.getElementById(
+            "eventTopLinesTable"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    const rows =
+        Dashboard.filteredEventTopLines ||
+        getEventTopLineRows();
+
+
+    if (!rows.length) {
+
+        renderEmptyRow(
+            tbody,
+            3,
+            "No event data available."
+        );
+
+        return;
+
+    }
+
+
+    /*
+       Group by Event Type.
+    */
+
+    const grouped = {};
+
+
+    rows.forEach(
+        event => {
+
+            const eventType =
+                String(
+                    event.eventType ||
+                    event.type ||
+                    "Unknown"
+                )
+                .trim();
+
+
+            if (!grouped[eventType]) {
+
+                grouped[eventType] = {
+
+                    eventType:
+                        eventType,
+
+                    registered:
+                        0,
+
+                    attended:
+                        0
+
+                };
+
+            }
+
+
+            grouped[eventType].registered +=
+                Number(
+                    event.registered ||
+                    event.totalRegistered ||
+                    0
+                );
+
+
+            grouped[eventType].attended +=
+                Number(
+                    event.attended ||
+                    event.totalAttended ||
+                    0
+                );
+
+        }
+    );
+
+
+    const summary =
+        Object.values(
+            grouped
+        );
+
+
+    summary.sort(
+        (a, b) =>
+            a.eventType.localeCompare(
+                b.eventType,
+                undefined,
+                {
+                    sensitivity:
+                        "base"
+                }
+            )
+    );
+
+
+    summary.forEach(
+        event => {
+
+            const tr =
+                document.createElement(
+                    "tr"
+                );
+
+
+            tr.innerHTML = `
+
+                <td>
+                    ${escapeHtml(
+                        event.eventType
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.registered
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        event.attended
+                    )}
+                </td>
+
+            `;
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   MISSION TRIP SUMMARY
+========================================================== */
+
+function renderMissionTripSummary() {
+
+    const tbody =
+        document.getElementById(
+            "missionTripSummaryTable"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    const trips =
+        Dashboard.filteredMissionTrips ||
+        getMissionTripRows();
+
+
+    if (!trips.length) {
+
+        renderEmptyRow(
+            tbody,
+            4,
+            "No mission trip data available."
+        );
+
+        return;
+
+    }
+
+
+    trips.forEach(
+        trip => {
+
+            const tr =
+                document.createElement(
+                    "tr"
+                );
+
+
+            tr.innerHTML = `
+
+                <td>
+                    ${escapeHtml(
+                        trip.tripName ||
+                        trip.tripCode ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHtml(
+                        trip.location ||
+                        "-"
+                    )}
+                </td>
+
+                <td>
+                    ${formatDate(
+                        trip.startDate
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        trip.participants ||
+                        0
+                    )}
+                </td>
+
+            `;
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   MISSION TRIP LOCATION SUMMARY
+========================================================== */
+
+function renderMissionTripLocationSummary() {
+
+    const tbody =
+        document.getElementById(
+            "missionTripLocationSummaryTable"
+        );
+
+
+    if (!tbody)
+        return;
+
+
+    tbody.innerHTML = "";
+
+
+    let summary =
+        Dashboard.data
+            ?.missionTrips
+            ?.summary
+            ?.data
+            ?.missionTripLocationSummary ||
+        Dashboard.missionData
+            ?.summary
+            ?.data
+            ?.missionTripLocationSummary ||
+        [];
+
+
+    if (!Array.isArray(summary)) {
+
+        summary = [];
+
+    }
+
+
+    /*
+       If filters are active, rebuild the location
+       summary from filtered trip records where possible.
+    */
+
+    if (
+        hasActiveDashboardFilters() &&
+        Dashboard.filteredMissionTrips.length
+    ) {
+
+        const grouped = {};
+
+
+        Dashboard.filteredMissionTrips.forEach(
+            trip => {
+
+                const location =
+                    String(
+                        trip.location ||
+                        "Unknown"
+                    ).trim();
+
+
+                if (!grouped[location]) {
+
+                    grouped[location] = {
+
+                        location:
+                            location,
+
+                        trips:
+                            0,
+
+                        totalParticipants:
+                            0
+
+                    };
+
+                }
+
+
+                grouped[location].trips += 1;
+
+
+                grouped[location]
+                    .totalParticipants +=
+                        Number(
+                            trip.participants ||
+                            trip.totalParticipants ||
+                            0
+                        );
+
+            }
+        );
+
+
+        summary =
+            Object.values(
+                grouped
+            );
+
+    }
+
+
+    if (!summary.length) {
+
+        renderEmptyRow(
+            tbody,
+            3,
+            "No mission trip location data available."
+        );
+
+        return;
+
+    }
+
+
+    summary
+        .sort(
+            (a, b) =>
+                String(
+                    a.location ||
+                    ""
+                )
+                .localeCompare(
+                    String(
+                        b.location ||
+                        ""
+                    )
+                )
+        )
+        .forEach(
+            location => {
+
+                const tr =
+                    document.createElement(
+                        "tr"
+                    );
+
+
+                tr.innerHTML = `
+
+                    <td>
+                        ${escapeHtml(
+                            location.location ||
+                            "-"
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatNumber(
+                            location.trips ||
+                            0
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatNumber(
+                            location.totalParticipants ||
+                            0
+                        )}
+                    </td>
+
+                `;
+
+
+                tbody.appendChild(
+                    tr
+                );
+
+            }
+        );
+
+}
+
+
+/* ==========================================================
+   CHURCH / LEADERSHIP COMPATIBILITY
+========================================================== */
+
+function renderChurches() {
+
+    return;
+
+}
+
+
+function renderLeadership() {
+
+    return;
+
+}
+
+
+/* ==========================================================
+   FILTER INITIALISATION
+========================================================== */
+
+function initialiseFilters() {
+
+    const participants =
+        getParticipantRows();
+
+
+    /*
+       Church
+    */
+
+    populateFilter(
+        "filterChurch",
+        uniqueValues(
+            participants,
+            "church"
+        ),
+        "All Churches"
+    );
+
+
+    /*
+       Leadership
+    */
+
+    populateFilter(
+        "filterLeadership",
+        uniqueValues(
+            participants,
+            "leadership"
+        ),
+        "All Leadership Levels"
+    );
+
+
+    /*
+       Status
+    */
+
+    populateFilter(
+        "filterStatus",
+        uniqueValues(
+            participants,
+            "status"
+        ),
+        "All Participant Status"
+    );
+
+
+    /*
+       Events
+    */
+
+    populateFilter(
+        "filterEvent",
+        getEventNames(
+            getEventSummaryRows()
+        ),
+        "All Events"
+    );
+
+
+    /*
+       Event types
+    */
+
+    populateFilter(
+        "filterEventType",
+        uniqueValues(
+            getEventSummaryRows(),
+            "type"
+        ),
+        "All Event Types"
+    );
+
+
+    /*
+       Years
+    */
+
+    populateFilter(
+        "filterYear",
+        getEventYears(),
+        "All Years"
+    );
+
+
+    bindFilterControls();
+
+}
+
+
+/* ==========================================================
+   FILTER CONTROLS
+========================================================== */
+
+function bindFilterControls() {
+
+    const filterIds = [
+
+        "filterYear",
+
+        "filterChurch",
+
+        "filterLeadership",
+
+        "filterStatus",
+
+        "filterEventType",
+
+        "filterEvent"
+
+    ];
+
+
+    filterIds.forEach(
+        id => {
+
+            const element =
+                document.getElementById(
+                    id
+                );
+
+
+            if (!element)
+                return;
+
+
+            if (
+                element.dataset.bound ===
+                "true"
+            )
+                return;
+
+
+            element.dataset.bound =
+                "true";
+
+
+            element.addEventListener(
+                "change",
+                applyDashboardFilters
+            );
+
+        }
+    );
+
+
+    const reset =
+        document.getElementById(
+            "resetFilters"
+        );
+
+
+    if (
+        reset &&
+        reset.dataset.bound !==
+            "true"
+    ) {
+
+        reset.dataset.bound =
+            "true";
+
+
+        reset.addEventListener(
+            "click",
+            resetDashboardFilters
+        );
+
+    }
+
+
+    setupParticipantTableSearch();
+
+    setupParticipantSearch();
+
+
+    Dashboard.filtersBound =
+        true;
+
+}
+
+
+/* ==========================================================
+   APPLY ALL FILTERS
+========================================================== */
+
+function applyDashboardFilters() {
+
+    const participants =
+        getParticipantRows();
+
+
+    const events =
+        getEventSummaryRows();
+
+
+    const topLines =
+        getEventTopLineRows();
+
+
+    const trips =
+        getMissionTripRows();
+
+
+    const year =
+        getFilterValue(
+            "filterYear"
+        );
+
+
+    const church =
+        getFilterValue(
+            "filterChurch"
+        );
+
+
+    const leadership =
+        getFilterValue(
+            "filterLeadership"
+        );
+
+
+    const status =
+        getFilterValue(
+            "filterStatus"
+        );
+
+
+    const eventType =
+        getFilterValue(
+            "filterEventType"
+        );
+
+
+    const eventName =
+        getFilterValue(
+            "filterEvent"
+        );
+
+
+    const participantSearch =
+        getFilterValue(
+            "participantSearch"
+        )
+        .toLowerCase();
+
+
+    /*
+       ------------------------------------------------------
+       PARTICIPANTS
+       ------------------------------------------------------
+    */
+
+    Dashboard.filteredParticipants =
+        participants.filter(
+            person => {
+
+                if (
+                    church &&
+                    String(
+                        person.church ||
+                        ""
+                    ) !== church
+                )
+                    return false;
+
+
+                if (
+                    leadership &&
+                    String(
+                        person.leadership ||
+                        ""
+                    ) !== leadership
+                )
+                    return false;
+
+
+                if (
+                    status &&
+                    String(
+                        person.status ||
+                        ""
+                    ) !== status
+                )
+                    return false;
+
+
+                if (
+                    participantSearch &&
+                    !participantMatchesSearch(
+                        person,
+                        participantSearch
+                    )
+                )
+                    return false;
+
+
+                return true;
+
+            }
+        );
+
+
+    /*
+       ------------------------------------------------------
+       EVENT SUMMARY
+       ------------------------------------------------------
+    */
+
+    Dashboard.filteredEventSummary =
+        events.filter(
+            event => {
+
+                if (
+                    year &&
+                    getYear(
+                        event.date
+                    ) !== year
+                )
+                    return false;
+
+
+                if (
+                    eventType &&
+                    String(
+                        event.type ||
+                        ""
+                    ) !== eventType
+                )
+                    return false;
+
+
+                if (
+                    eventName &&
+                    String(
+                        event.event ||
+                        event.eventName ||
+                        ""
+                    ) !== eventName
+                )
+                    return false;
+
+
+                return true;
+
+            }
+        );
+
+
+    /*
+       ------------------------------------------------------
+       EVENT TOP LINES
+       ------------------------------------------------------
+    */
+
+    Dashboard.filteredEventTopLines =
+        topLines.filter(
+            event => {
+
+                if (
+                    eventType &&
+                    String(
+                        event.eventType ||
+                        event.type ||
+                        ""
+                    ) !== eventType
+                )
+                    return false;
+
+
+                if (
+                    eventName &&
+                    String(
+                        event.event ||
+                        event.eventName ||
+                        ""
+                    ) !== eventName
+                )
+                    return false;
+
+
+                if (year) {
+
+                    const date =
+                        event.date ||
+                        event.eventDate;
+
+
+                    if (
+                        date &&
+                        getYear(date) !== year
+                    )
+                        return false;
+
+                }
+
+
+                return true;
+
+            }
+        );
+
+
+    /*
+       ------------------------------------------------------
+       MISSION TRIPS
+       ------------------------------------------------------
+    */
+
+    Dashboard.filteredMissionTrips =
+        trips.filter(
+            trip => {
+
+                if (year) {
+
+                    const date =
+                        trip.startDate ||
+                        trip.date ||
+                        trip.endDate;
+
+
+                    if (
+                        date &&
+                        getYear(date) !== year
+                    )
+                        return false;
+
+                }
+
+
+                /*
+                   Event filter does not normally apply
+                   to mission trips.
+                */
+
+                return true;
+
+            }
+        );
+
+
+    /*
+       ------------------------------------------------------
+       RENDER
+       ------------------------------------------------------
+    */
+
+    renderParticipantDirectory();
+
+    renderEventSummaryTable();
+
+    renderEventTopLines();
+
+    renderMissionTripSummary();
+
+    renderMissionTripLocationSummary();
+
+
+    updateFilterResultCount();
+
+}
+
+
+/* ==========================================================
+   RESET FILTERS
+========================================================== */
+
+function resetDashboardFilters() {
+
+    [
+
+        "filterYear",
+
+        "filterChurch",
+
+        "filterLeadership",
+
+        "filterStatus",
+
+        "filterEventType",
+
+        "filterEvent",
+
+        "participantSearch",
+
+        "participantTableSearch"
+
+    ]
+    .forEach(
+        id => {
+
+            const element =
+                document.getElementById(
+                    id
+                );
+
+
+            if (element) {
+
+                element.value =
+                    "";
+
+            }
+
+        }
+    );
+
+
+    const results =
+        document.getElementById(
+            "participantSearchResults"
+        );
+
+
+    if (results) {
+
+        results.innerHTML =
+            "";
+
+    }
+
+
+    Dashboard.filteredParticipants =
+        getParticipantRows();
+
+
+    Dashboard.filteredEventSummary =
+        getEventSummaryRows();
+
+
+    Dashboard.filteredEventTopLines =
+        getEventTopLineRows();
+
+
+    Dashboard.filteredMissionTrips =
+        getMissionTripRows();
+
+
+    renderDashboard();
+
+}
+
+
+/* ==========================================================
+   FILTER RESULT COUNT
+========================================================== */
+
+function updateFilterResultCount(
+    explicitCount
+) {
+
+    const count =
+        explicitCount ??
+        Dashboard.filteredParticipants?.length ??
+        getParticipantRows().length;
+
+
+    setText(
+        "participantResultCount",
+        `${formatNumber(
+            count
+        )} participants`
+    );
+
+}
+
+
+/* ==========================================================
+   FILTER ACTIVE CHECK
+========================================================== */
+
+function hasActiveDashboardFilters() {
+
+    return [
+
+        "filterYear",
+
+        "filterChurch",
+
+        "filterLeadership",
+
+        "filterStatus",
+
+        "filterEventType",
+
+        "filterEvent",
+
+        "participantSearch"
+
+    ]
+    .some(
+        id =>
+            Boolean(
+                getFilterValue(id)
+            )
+    );
+
+}
+
+
+/* ==========================================================
+   POPULATE FILTER
+========================================================== */
+
+function populateFilter(
+    elementId,
+    values,
+    defaultLabel
+) {
+
+    const select =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!select)
+        return;
+
+
+    const current =
+        select.value;
+
+
+    select.innerHTML =
+        "";
+
+
+    const defaultOption =
+        document.createElement(
+            "option"
+        );
+
+
+    defaultOption.value =
+        "";
+
+
+    defaultOption.textContent =
+        defaultLabel;
+
+
+    select.appendChild(
+        defaultOption
+    );
+
+
+    (values || [])
+        .filter(Boolean)
+        .sort(
+            (a, b) =>
+                String(a)
+                    .localeCompare(
+                        String(b),
+                        undefined,
+                        {
+                            numeric:
+                                true,
+
+                            sensitivity:
+                                "base"
+                        }
+                    )
+        )
+        .forEach(
+            value => {
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                option.value =
+                    value;
+
+
+                option.textContent =
+                    value;
+
+
+                select.appendChild(
+                    option
+                );
+
+            }
+        );
+
+
+    if (
+        values.includes(
+            current
+        )
+    ) {
+
+        select.value =
+            current;
+
+    }
+
+}
+
+
+/* ==========================================================
+   EVENT YEARS
+========================================================== */
+
+function getEventYears() {
+
+    const events =
+        getEventSummaryRows();
+
+
+    return [
+        ...new Set(
+            events
+                .map(
+                    event =>
+                        getYear(
+                            event.date
+                        )
+                )
+                .filter(Boolean)
+        )
+    ]
+    .sort(
+        (a, b) =>
+            Number(a) -
+            Number(b)
+    );
+
+}
+
+
+/* ==========================================================
+   UNIQUE VALUES
+========================================================== */
+
+function uniqueValues(
+    rows,
+    field
+) {
+
+    return [
+        ...new Set(
+            (rows || [])
+                .map(
+                    row =>
+                        row?.[field]
+                )
+                .filter(Boolean)
+        )
+    ];
+
+}
+
+
+/* ==========================================================
+   EVENT NAMES
+========================================================== */
+
+function getEventNames(
+    rows
+) {
+
+    return [
+        ...new Set(
+            (rows || [])
+                .map(
+                    row =>
+                        row.event ||
+                        row.eventName
+                )
+                .filter(Boolean)
+        )
+    ];
+
+}
+
+
+/* ==========================================================
+   FILTER VALUE
+========================================================== */
+
+function getFilterValue(
+    id
+) {
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    return String(
+        element?.value ||
+        ""
+    )
+    .trim();
+
+}
+
+
+/* ==========================================================
+   MODAL
+========================================================== */
+
+function showModalElement(
+    modal
+) {
+
+    if (!modal)
+        return;
+
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+
+    modal.classList.add(
+        "active"
+    );
+
+
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+}
+
+
+/* ==========================================================
+   DETAILS MODAL
+========================================================== */
+
+function showDetailsModal(
+    title,
+    data
+) {
+
+    const modal =
+        document.getElementById(
+            "detailsModal"
+        );
+
+
+    const titleElement =
+        document.getElementById(
+            "modalTitle"
+        );
+
+
+    const body =
+        document.getElementById(
+            "modalBody"
+        );
+
+
+    if (
+        !modal ||
+        !titleElement ||
+        !body
+    )
+        return;
+
+
+    titleElement.textContent =
+        title ||
+        "Details";
+
+
+    body.innerHTML = `
+
+        <pre>
+${escapeHtml(
+    JSON.stringify(
+        data,
+        null,
+        2
+    )
+)}
+        </pre>
+
+    `;
+
+
+    showModalElement(
+        modal
+    );
+
+}
+
+
+/* ==========================================================
+   OPEN MODAL
+========================================================== */
+
+function openModal(
+    modalId
+) {
+
+    const modal =
+        document.getElementById(
+            modalId
+        );
+
+
+    if (!modal)
+        return;
+
+
+    showModalElement(
+        modal
+    );
+
+}
+
+
+/* ==========================================================
+   CLOSE MODAL
+========================================================== */
+
+function closeModal(
+    modalId
+) {
+
+    const modal =
+        document.getElementById(
+            modalId
+        );
+
+
+    if (!modal)
+        return;
+
+
+    modal.classList.remove(
+        "active"
+    );
+
+
+    modal.classList.add(
+        "hidden"
+    );
+
+
+    modal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+}
+
+
+/* ==========================================================
+   MODAL CONTROLS
+========================================================== */
+
+function bindModalControls() {
+
+    document
+        .querySelectorAll(
+            "#intelligence [data-close-modal]"
+        )
+        .forEach(
+            button => {
+
+                if (
+                    button.dataset.bound ===
+                    "true"
+                )
+                    return;
+
+
+                button.dataset.bound =
+                    "true";
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        closeModal(
+                            this.dataset
+                                .closeModal
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+    document
+        .querySelectorAll(
+            "#intelligence .modal"
+        )
+        .forEach(
+            modal => {
+
+                if (
+                    modal.dataset.bound ===
+                    "true"
+                )
+                    return;
+
+
+                modal.dataset.bound =
+                    "true";
+
+
+                modal.addEventListener(
+                    "click",
+                    event => {
+
+                        if (
+                            event.target ===
+                            modal
+                        ) {
+
+                            closeModal(
+                                modal.id
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+    const closeParticipant =
+        document.getElementById(
+            "closeParticipantJourney"
+        );
+
+
+    if (
+        closeParticipant &&
+        closeParticipant.dataset.bound !==
+            "true"
+    ) {
+
+        closeParticipant.dataset.bound =
+            "true";
+
+
+        closeParticipant.addEventListener(
+            "click",
+            () => {
+
+                closeModal(
+                    "participantJourneyModal"
+                );
+
+
+                closeModal(
+                    "detailsModal"
+                );
+
+            }
+        );
+
+    }
+
+}
+
+
+/* ==========================================================
+   DASHBOARD UI
+========================================================== */
+
+function bindDashboardUI() {
+
+    if (
+        Dashboard.uiBound
+    )
+        return;
+
+
+    bindModalControls();
+
+
+    const refresh =
+        document.getElementById(
+            "refreshDashboard"
+        );
+
+
+    if (
+        refresh &&
+        refresh.dataset.bound !==
+            "true"
+    ) {
+
+        refresh.dataset.bound =
+            "true";
+
+
+        refresh.addEventListener(
+            "click",
+            refreshDashboard
+        );
+
+    }
+
+
+    Dashboard.uiBound =
+        true;
+
+}
+
+
+/* ==========================================================
+   MISSION HEALTH CLASS
+========================================================== */
+
+function updateMissionHealthClass(
+    status
+) {
+
+    const elements = [
+
+        document.getElementById(
+            "missionHealthStatus"
+        ),
+
+        document.getElementById(
+            "kpiMissionHealthStatus"
+        )
+
+    ]
+    .filter(Boolean);
+
+
+    elements.forEach(
+        element => {
+
+            element.classList.remove(
+
+                "health-excellent",
+
+                "health-healthy",
+
+                "health-growing",
+
+                "health-attention",
+
+                "health-critical",
+
+                "excellent",
+
+                "healthy",
+
+                "growing",
+
+                "needs-attention",
+
+                "critical"
+
+            );
+
+
+            const value =
+                String(
+                    status ||
+                    ""
+                )
+                .toLowerCase();
+
+
+            switch (value) {
+
+                case "excellent":
+
+                    element.classList.add(
+                        "health-excellent",
+                        "excellent"
+                    );
+
+                    break;
+
+
+                case "healthy":
+
+                    element.classList.add(
+                        "health-healthy",
+                        "healthy"
+                    );
+
+                    break;
+
+
+                case "growing":
+
+                    element.classList.add(
+                        "health-growing",
+                        "growing"
+                    );
+
+                    break;
+
+
+                case "needs attention":
+
+                    element.classList.add(
+                        "health-attention",
+                        "needs-attention"
+                    );
+
+                    break;
+
+
+                case "critical":
+
+                    element.classList.add(
+                        "health-critical",
+                        "critical"
+                    );
+
+                    break;
+
+            }
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   PASTOR CARD
+========================================================== */
+
+function addPastorCard(
+    container,
+    title,
+    value
+) {
+
+    const card =
+        document.createElement(
+            "div"
+        );
+
+
+    card.className =
+        "pastorCard";
+
+
+    card.innerHTML = `
+
+        <div class="pastorTitle">
+            ${escapeHtml(
+                title
+            )}
+        </div>
+
+        <div class="pastorValue">
+            ${escapeHtml(
+                value
+            )}
+        </div>
+
+    `;
+
+
+    container.appendChild(
+        card
+    );
+
+}
+
+
+/* ==========================================================
+   GENERIC LIST
+========================================================== */
+
+function renderList(
+    elementId,
+    items
+) {
+
+    const container =
+        document.getElementById(
+            elementId
+        );
+
+
+    if (!container)
+        return;
+
+
+    container.innerHTML =
+        "";
+
+
+    if (
+        !Array.isArray(items) ||
+        !items.length
+    )
+        return;
+
+
+    items.forEach(
+        item => {
+
+            const li =
+                document.createElement(
+                    "li"
+                );
+
+
+            li.textContent =
+                item;
+
+
+            container.appendChild(
+                li
+            );
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   SET TEXT
+========================================================== */
+
+function setText(
+    id,
+    value
+) {
+
+    const element =
+        document.getElementById(
+            id
+        );
+
+
+    if (!element)
+        return;
+
+
+    element.textContent =
+        value ??
+        "";
+
+}
+
+
+/* ==========================================================
+   SET MULTIPLE TEXT
+========================================================== */
+
+function setTextMultiple(
+    ids,
+    value
+) {
+
+    ids.forEach(
+        id =>
+            setText(
+                id,
+                value
+            )
+    );
+
+}
+
+
+/* ==========================================================
+   NUMBER FORMAT
+========================================================== */
+
+function formatNumber(
+    value
+) {
+
+    const number =
+        Number(
+            value || 0
+        );
+
+
+    if (
+        Number.isNaN(
+            number
+        )
+    )
+        return "0";
+
+
+    return number.toLocaleString(
+        "en-SG"
+    );
+
+}
+
+
+/* ==========================================================
+   GROWTH FORMAT
+========================================================== */
+
+function formatGrowth(
+    value
+) {
+
+    const number =
+        Number(
+            value || 0
+        );
+
+
+    if (
+        Number.isNaN(
+            number
+        )
+    )
+        return "0%";
+
+
+    if (
+        number > 0
+    )
+        return `+${number}%`;
+
+
+    return `${number}%`;
+
+}
+
+
+/* ==========================================================
+   DATE FORMAT
+========================================================== */
+
+function formatDate(
+    value
+) {
+
+    if (!value)
+        return "—";
+
+
+    const date =
+        new Date(
+            value
+        );
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    )
+        return String(
+            value
+        );
+
+
+    return date.toLocaleDateString(
+        "en-SG",
+        {
+
+            day:
+                "2-digit",
+
+            month:
+                "short",
+
+            year:
+                "numeric"
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   PARTICIPANT JOURNEY DATE
+========================================================== */
+
+function formatParticipantJourneyDate(
+    value
+) {
+
+    if (!value)
+        return "";
+
+
+    const date =
+        new Date(
+            value
+        );
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+
+        return String(
+            value
+        );
+
+    }
+
+
+    return date.toLocaleDateString(
+        "en-GB",
+        {
+
+            day:
+                "2-digit",
+
+            month:
+                "short",
+
+            year:
+                "numeric"
+
+        }
+    );
+
+}
+
+
+/* ==========================================================
+   YEAR
+========================================================== */
+
+function getYear(
+    value
+) {
+
+    if (!value)
+        return "";
+
+
+    const date =
+        new Date(
+            value
+        );
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    )
+        return "";
+
+
+    return String(
+        date.getFullYear()
+    );
+
+}
+
+
+/* ==========================================================
+   STATUS CLASS
+========================================================== */
+
+function getStatusClass(
+    status
+) {
+
+    return String(
+        status ||
+        ""
+    )
+    .toLowerCase()
+    .replace(
+        /[^a-z0-9]+/g,
+        "-"
+    )
+    .replace(
+        /^-|-$/g,
+        ""
+    );
+
+}
+
+
+/* ==========================================================
+   EMPTY ROW
+========================================================== */
+
+function renderEmptyRow(
+    tbody,
+    colspan,
+    message
+) {
+
+    const tr =
+        document.createElement(
+            "tr"
+        );
+
+
+    tr.innerHTML = `
+
+        <td
+            colspan="${colspan}"
+            style="text-align:center;"
+        >
+            ${escapeHtml(
+                message
+            )}
+        </td>
+
+    `;
+
+
+    tbody.appendChild(
+        tr
+    );
+
+}
+
+
+/* ==========================================================
+   HTML ESCAPE
+========================================================== */
+
+function escapeHtml(
+    value
+) {
+
+    return String(
+        value ??
+        ""
+    )
+
+    .replace(
+        /&/g,
+        "&amp;"
+    )
+
+    .replace(
+        /</g,
+        "&lt;"
+    )
+
+    .replace(
+        />/g,
+        "&gt;"
+    )
+
+    .replace(
+        /"/g,
+        "&quot;"
+    )
+
+    .replace(
+        /'/g,
+        "&#039;"
+    );
+
+}
+
+
+/* ==========================================================
+   DEBOUNCE
+========================================================== */
+
+function debounce(
+    callback,
+    delay
+) {
+
+    let timer;
+
+
+    return function (...args) {
+
+        clearTimeout(
+            timer
+        );
+
+
+        timer =
+            setTimeout(
+                () => {
+
+                    callback.apply(
+                        this,
+                        args
+                    );
+
+                },
+                delay
+            );
+
+    };
+
+}
+
+
+/* ==========================================================
+   INTELLIGENCE LOADING
+========================================================== */
+
+function showIntelligenceLoading(
+    show,
+    message
+) {
+
+    const overlay =
+        document.getElementById(
+            "loadingOverlay"
+        );
+
+
+    if (!overlay)
+        return;
+
+
+    const text =
+        document.getElementById(
+            "loadingText"
+        );
+
+
+    if (
+        text &&
+        message
+    ) {
+
+        text.textContent =
+            message;
+
+    }
+
+
+    overlay.classList.toggle(
+        "hidden",
+        !show
+    );
+
+}
+
+
+/* ==========================================================
+   ERROR
+========================================================== */
+
+function showIntelligenceError(
+    message
+) {
+
+    console.error(
+        message
+    );
+
+
+    const element =
+        document.getElementById(
+            "dashboardError"
+        );
+
+
+    if (!element)
+        return;
+
+
+    element.textContent =
+        message ||
+        "Unable to load dashboard.";
+
+
+    element.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* ==========================================================
+   CLEAR ERROR
+========================================================== */
+
+function clearIntelligenceError() {
+
+    const element =
+        document.getElementById(
+            "dashboardError"
+        );
+
+
+    if (!element)
+        return;
+
+
+    element.textContent =
+        "";
+
+
+    element.classList.add(
+        "hidden"
+    );
+
+}
+
+
+/* ==========================================================
+   LAST REFRESH
+========================================================== */
+
+function updateLastRefresh() {
+
+    const element =
+        document.getElementById(
+            "lastRefresh"
+        );
+
+
+    if (!element)
+        return;
+
+
+    element.textContent =
+        new Date()
+            .toLocaleString(
+                "en-SG"
+            );
+
+}
+
+
+/* ==========================================================
+   COMPATIBILITY
+========================================================== */
+
+function dashboardReady() {
+
+    clearIntelligenceError();
+
+    updateLastRefresh();
+
+    updateFilterResultCount();
+
+}
+
+
+/* ==========================================================
+   COMPATIBILITY ALIASES
+========================================================== */
+
+function refreshFilteredDashboard() {
+
+    applyDashboardFilters();
+
+}
+
+
+function setupFilters() {
+
+    initialiseFilters();
+
+}
+
+
+function setupParticipantSearchLegacy() {
+
+    setupParticipantSearch();
+
+}
+
+
+/* ==========================================================
+   GLOBAL ACCESS
+========================================================== */
+
+/*
+   These are intentionally exposed globally because
+   dashboard.html navigation / onclick handlers may need
+   to call them.
+*/
+
+window.initIntelligenceCenter =
+    initIntelligenceCenter;
+
+
+window.refreshDashboard =
+    refreshDashboard;
+
+
+window.refreshIntelligenceCenter =
+    refreshDashboard;
+
+
+window.applyDashboardFilters =
+    applyDashboardFilters;
+
+
+window.resetDashboardFilters =
+    resetDashboardFilters;
+
+
+window.openParticipantJourney =
+    openParticipantJourney;
+
+
+window.openEventDetails =
+    openEventDetails;
+
+
+window.openModal =
+    openModal;
+
+
+window.closeModal =
+    closeModal;
+
+
+/* ==========================================================
+   IMPORTANT:
+   NO DOMContentLoaded API CALL
+========================================================== */
+
+/*
+   DO NOT put:
+
+       document.addEventListener(
+           "DOMContentLoaded",
+           initialiseDashboard
+       );
+
+   here.
+
+   Intelligence Centre is intentionally lazy-loaded.
+*/
+
+console.log(
+    "Missions Intelligence Centre JS ready — waiting for section open."
+);
+
+</script>
   
 </script>
 
