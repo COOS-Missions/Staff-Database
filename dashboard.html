@@ -8799,7 +8799,7 @@ STATE
 
 const Dashboard = {
 
-```
+
 data: null,
 
 missionData: null,
@@ -8827,7 +8827,7 @@ initialised: false,
 loading: false,
 
 uiBound: false
-```
+
 
 };
 
@@ -8841,7 +8841,7 @@ INIT
 
 async function initIntelligenceCenter(force = false) {
 
-```
+
 const section =
     document.getElementById("intelligence");
 
@@ -8942,7 +8942,7 @@ finally {
     );
 
 }
-```
+
 
 }
 
@@ -8952,7 +8952,7 @@ LOAD DASHBOARD
 
 async function loadDashboard() {
 
-```
+
 console.log(
     "=== INTELLIGENCE API START ==="
 );
@@ -9042,7 +9042,7 @@ console.log(
     "MISSION TRIP DATA:",
     Dashboard.data?.missionTrips
 );
-```
+
 
 }
 
@@ -9052,13 +9052,13 @@ REFRESH
 
 async function refreshDashboard() {
 
-```
+
 Dashboard.initialised = false;
 
 await initIntelligenceCenter(
     true
 );
-```
+
 
 }
 
@@ -9074,7 +9074,7 @@ GET PARTICIPANTS
 
 function getParticipantRows() {
 
-```
+
 const rows =
     Dashboard.data
         ?.tables
@@ -9084,7 +9084,7 @@ const rows =
 return Array.isArray(rows)
     ? rows
     : [];
-```
+
 
 }
 
@@ -9094,7 +9094,7 @@ GET EVENT TOP LINES
 
 function getEventTopLineRows() {
 
-```
+
 const rows =
     Dashboard.data
         ?.tables
@@ -9104,7 +9104,7 @@ const rows =
 return Array.isArray(rows)
     ? rows
     : [];
-```
+
 
 }
 
@@ -9114,7 +9114,7 @@ GET MISSION TRIPS
 
 function getMissionTripRows() {
 
-```
+
 const mission =
     Dashboard.data?.missionTrips ||
     Dashboard.missionData ||
@@ -9141,7 +9141,7 @@ const rows =
 return Array.isArray(rows)
     ? rows
     : [];
-```
+
 
 }
 
@@ -9151,7 +9151,7 @@ KPI
 
 function renderKPIs() {
 
-```
+
 const k =
     Dashboard.data?.kpis ||
     {};
@@ -9261,7 +9261,7 @@ setText(
         mission.averageParticipants
     )
 );
-```
+
 
 }
 
@@ -9271,7 +9271,7 @@ FILTER INITIALISATION
 
 function initialiseFilters() {
 
-```
+
 const participants =
     getParticipantRows();
 
@@ -9343,7 +9343,7 @@ populateSelect(
     years,
     "All Years"
 );
-```
+
 
 }
 
@@ -9357,7 +9357,7 @@ values,
 defaultText
 ) {
 
-```
+
 const select =
     document.getElementById(id);
 
@@ -9448,7 +9448,7 @@ if (
         current;
 
 }
-```
+
 
 }
 
@@ -9461,7 +9461,7 @@ rows,
 ...fields
 ) {
 
-```
+
 const values = [];
 
 
@@ -9499,7 +9499,7 @@ const values = [];
 return [
     ...new Set(values)
 ];
-```
+
 
 }
 
@@ -9511,7 +9511,7 @@ function uniqueYears(
 rows
 ) {
 
-```
+
 const years = [];
 
 
@@ -9538,7 +9538,7 @@ const years = [];
 return [
     ...new Set(years)
 ];
-```
+
 
 }
 
@@ -9548,7 +9548,7 @@ BIND UI
 
 function bindDashboardUI() {
 
-```
+
 if (Dashboard.uiBound)
     return;
 
@@ -9641,7 +9641,7 @@ if (reset) {
 
 Dashboard.uiBound =
     true;
-```
+
 
 }
 
@@ -9651,7 +9651,7 @@ APPLY FILTERS
 
 function applyDashboardFilters() {
 
-```
+
 Dashboard.filters.year =
     getValue(
         "filterYear"
@@ -9862,7 +9862,7 @@ renderEventTopLines();
 renderMissionTripLocationSummary();
 
 renderParticipantDirectory();
-```
+
 
 }
 
@@ -9872,7 +9872,7 @@ EVENT TOP LINES
 
 function renderEventTopLines() {
 
-```
+
 const tbody =
     document.getElementById(
         "eventTopLinesTable"
@@ -10021,7 +10021,7 @@ Object.values(grouped)
 
         }
     );
-```
+
 
 }
 
@@ -10031,7 +10031,7 @@ MISSION TRIP LOCATION SUMMARY
 
 function renderMissionTripLocationSummary() {
 
-```
+
 const tbody =
     document.getElementById(
         "missionTripLocationSummaryTable"
@@ -10255,7 +10255,7 @@ locations
 
         }
     );
-```
+
 
 }
 
@@ -10265,7 +10265,7 @@ PARTICIPANT DIRECTORY
 
 function renderParticipantDirectory() {
 
-```
+
 const tbody =
     document.getElementById(
         "participantSummaryTable"
@@ -10447,7 +10447,7 @@ people.forEach(
 updateParticipantCount(
     people.length
 );
-```
+
 
 }
 
@@ -10460,7 +10460,7 @@ person,
 search
 ) {
 
-```
+
 return [
 
     person.name,
@@ -10480,7 +10480,7 @@ return [
             .toLowerCase()
             .includes(search)
 );
-```
+
 
 }
 
@@ -10492,7 +10492,7 @@ function getParticipantIdentifier(
 person
 ) {
 
-```
+
 return (
 
     person.personID ||
@@ -10504,7 +10504,7 @@ return (
     ""
 
 );
-```
+
 
 }
 
@@ -10516,7 +10516,7 @@ async function openParticipantJourney(
 identifier
 ) {
 
-```
+
 if (!identifier) {
 
     alert(
@@ -10624,7 +10624,7 @@ finally {
     );
 
 }
-```
+
 
 }
 
@@ -10636,7 +10636,7 @@ function renderParticipantJourney(
 data
 ) {
 
-```
+
 const participant =
     data.participant ||
     data.person ||
@@ -10697,7 +10697,7 @@ renderParticipantChronology(
         ? journal
         : []
 );
-```
+
 
 }
 
@@ -10709,7 +10709,7 @@ function renderParticipantChronology(
 journal
 ) {
 
-```
+
 const tbody =
     document.getElementById(
         "participantJourneyTableBody"
@@ -10799,7 +10799,7 @@ if (!journal.length) {
 
         }
     );
-```
+
 
 }
 
@@ -10811,7 +10811,7 @@ function showModalElement(
 modal
 ) {
 
-```
+
 if (!modal)
     return;
 
@@ -10830,7 +10830,7 @@ modal.setAttribute(
     "aria-hidden",
     "false"
 );
-```
+
 
 }
 
@@ -10838,7 +10838,7 @@ function closeModal(
 modalId
 ) {
 
-```
+
 const modal =
     document.getElementById(
         modalId
@@ -10863,7 +10863,7 @@ modal.setAttribute(
     "aria-hidden",
     "true"
 );
-```
+
 
 }
 
@@ -10871,7 +10871,7 @@ function openModal(
 modalId
 ) {
 
-```
+
 const modal =
     document.getElementById(
         modalId
@@ -10882,7 +10882,7 @@ if (modal)
     showModalElement(
         modal
     );
-```
+
 
 }
 
@@ -10901,7 +10901,7 @@ RESET
 
 function resetDashboardFilters() {
 
-```
+
 [
 
     "filterYear",
@@ -10931,7 +10931,7 @@ function resetDashboardFilters() {
 
 
 applyDashboardFilters();
-```
+
 
 }
 
@@ -10946,7 +10946,7 @@ function getValue(
 id
 ) {
 
-```
+
 const element =
     document.getElementById(
         id
@@ -10957,7 +10957,7 @@ return String(
     element?.value ||
     ""
 ).trim();
-```
+
 
 }
 
@@ -10966,7 +10966,7 @@ id,
 value
 ) {
 
-```
+
 const element =
     document.getElementById(
         id
@@ -10976,7 +10976,7 @@ const element =
 if (element)
     element.textContent =
         value ?? "";
-```
+
 
 }
 
@@ -10984,7 +10984,7 @@ function formatNumber(
 value
 ) {
 
-```
+
 const number =
     Number(
         value || 0
@@ -11000,7 +11000,7 @@ if (
 return number.toLocaleString(
     "en-SG"
 );
-```
+
 
 }
 
@@ -11008,7 +11008,7 @@ function formatDate(
 value
 ) {
 
-```
+
 if (!value)
     return "—";
 
@@ -11033,7 +11033,7 @@ return date.toLocaleDateString(
         year: "numeric"
     }
 );
-```
+
 
 }
 
@@ -11041,7 +11041,7 @@ function getYear(
 value
 ) {
 
-```
+
 if (!value)
     return "";
 
@@ -11061,7 +11061,7 @@ if (
 return String(
     date.getFullYear()
 );
-```
+
 
 }
 
@@ -11069,7 +11069,7 @@ function escapeHtml(
 value
 ) {
 
-```
+
 return String(
     value ?? ""
 )
@@ -11093,7 +11093,7 @@ return String(
     /'/g,
     "&#039;"
 );
-```
+
 
 }
 
@@ -11103,7 +11103,7 @@ colspan,
 message
 ) {
 
-```
+
 const tr =
     document.createElement(
         "tr"
@@ -11127,7 +11127,7 @@ tr.innerHTML = `
 tbody.appendChild(
     tr
 );
-```
+
 
 }
 
@@ -11135,24 +11135,24 @@ function updateParticipantCount(
 count
 ) {
 
-```
+
 setText(
     "participantResultCount",
     `${formatNumber(
         count
     )} participants`
 );
-```
+
 
 }
 
 function hasMissionTripFilter() {
 
-```
+
 return Boolean(
     Dashboard.filters.year
 );
-```
+
 
 }
 
@@ -11161,7 +11161,7 @@ callback,
 delay
 ) {
 
-```
+
 let timer;
 
 
@@ -11186,7 +11186,7 @@ return function (...args) {
         );
 
 };
-```
+
 
 }
 
@@ -11199,7 +11199,7 @@ show,
 message
 ) {
 
-```
+
 const overlay =
     document.getElementById(
         "loadingOverlay"
@@ -11231,7 +11231,7 @@ overlay.classList.toggle(
     "hidden",
     !show
 );
-```
+
 
 }
 
@@ -11243,7 +11243,7 @@ function showIntelligenceError(
 message
 ) {
 
-```
+
 const element =
     document.getElementById(
         "dashboardError"
@@ -11262,13 +11262,13 @@ element.textContent =
 element.classList.remove(
     "hidden"
 );
-```
+
 
 }
 
 function clearIntelligenceError() {
 
-```
+
 const element =
     document.getElementById(
         "dashboardError"
@@ -11286,7 +11286,7 @@ element.textContent =
 element.classList.add(
     "hidden"
 );
-```
+
 
 }
 
@@ -11296,14 +11296,14 @@ LAST REFRESH
 
 function updateLastRefresh() {
 
-```
+
 setText(
     "lastRefresh",
     new Date().toLocaleString(
         "en-SG"
     )
 );
-```
+
 
 }
 
@@ -11315,7 +11315,7 @@ document.addEventListener(
 "click",
 event => {
 
-```
+
     const closeButton =
         event.target.closest(
             "[data-close-modal]"
@@ -11345,7 +11345,7 @@ event => {
     }
 
 }
-```
+
 
 );
 
