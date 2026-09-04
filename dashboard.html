@@ -9790,16 +9790,38 @@ function getEventTopLineRows() {
 }
 
 
+
 function getMissionTripRows() {
 
-    const trips =
-        Dashboard.missionData
-            ?.summary
-            ?.trips ||
+    const summary =
         Dashboard.data
             ?.missionTrips
-            ?.summary
-            ?.trips ||
+            ?.summary ||
+        Dashboard.missionData
+            ?.summary ||
+        {};
+
+
+    /*
+     * Supported backend structures:
+     *
+     * summary.trips
+     * summary.tripSummary
+     *
+     * Older compilation response:
+     *
+     * summary.data.trips
+     * summary.data.tripSummary
+     */
+
+    const data =
+        summary.data ||
+        summary;
+
+
+    const trips =
+        data.tripSummary ||
+        data.trips ||
         [];
 
 
@@ -9808,6 +9830,7 @@ function getMissionTripRows() {
         : [];
 
 }
+
 
 
 /* ==========================================================
@@ -11593,30 +11616,28 @@ function renderMissionTripLocationSummary() {
     tbody.innerHTML = "";
 
 
-    let summary =
+    const summary =
         Dashboard.data
             ?.missionTrips
-            ?.summary
-            ?.data
-            ?.missionTripLocationSummary ||
-        Dashboard.missionData
-            ?.summary
-            ?.data
-            ?.missionTripLocationSummary ||
+            ?.summary ||
+        {};
+
+
+    const data =
+        summary.data ||
+        summary;
+
+
+    let locations =
+        data.missionTripLocationSummary ||
+        data.locationSummary ||
         [];
 
 
-    if (!Array.isArray(summary)) {
-
-        summary = [];
-
-    }
-
-
     /*
-       If filters are active, rebuild the location
-       summary from filtered trip records where possible.
-    */
+     * If filtered trip rows exist,
+     * rebuild from the actual filtered rows.
+     */
 
     if (
         hasActiveDashboardFilters() &&
@@ -11626,8 +11647,8 @@ function renderMissionTripLocationSummary() {
         const grouped = {};
 
 
-        Dashboard.filteredMissionTrips.forEach(
-            trip => {
+        Dashboard.filteredMissionTrips
+            .forEach(trip => {
 
                 const location =
                     String(
@@ -11654,22 +11675,23 @@ function renderMissionTripLocationSummary() {
                 }
 
 
-                grouped[location].trips += 1;
+                grouped[location]
+                    .trips++;
 
 
                 grouped[location]
                     .totalParticipants +=
                         Number(
+                            trip.participantCount ||
                             trip.participants ||
                             trip.totalParticipants ||
                             0
                         );
 
-            }
-        );
+            });
 
 
-        summary =
+        locations =
             Object.values(
                 grouped
             );
@@ -11677,7 +11699,10 @@ function renderMissionTripLocationSummary() {
     }
 
 
-    if (!summary.length) {
+    if (
+        !Array.isArray(locations) ||
+        !locations.length
+    ) {
 
         renderEmptyRow(
             tbody,
@@ -11690,63 +11715,83 @@ function renderMissionTripLocationSummary() {
     }
 
 
-    summary
+    locations
+        .map(item => ({
+
+            location:
+                item.location ||
+                item.destination ||
+                "Unknown",
+
+            trips:
+                Number(
+                    item.trips ||
+                    item.totalTrips ||
+                    item.totalTeams ||
+                    0
+                ),
+
+            totalParticipants:
+                Number(
+                    item.totalParticipants ||
+                    item.participants ||
+                    0
+                )
+
+        }))
+
         .sort(
             (a, b) =>
-                String(
-                    a.location ||
-                    ""
-                )
-                .localeCompare(
-                    String(
-                        b.location ||
-                        ""
-                    )
+                a.location.localeCompare(
+                    b.location,
+                    undefined,
+                    {
+                        sensitivity:
+                            "base"
+                    }
                 )
         )
-        .forEach(
-            location => {
 
-                const tr =
-                    document.createElement(
-                        "tr"
-                    );
+        .forEach(item => {
 
-
-                tr.innerHTML = `
-
-                    <td>
-                        ${escapeHtml(
-                            location.location ||
-                            "-"
-                        )}
-                    </td>
-
-                    <td>
-                        ${formatNumber(
-                            location.trips ||
-                            0
-                        )}
-                    </td>
-
-                    <td>
-                        ${formatNumber(
-                            location.totalParticipants ||
-                            0
-                        )}
-                    </td>
-
-                `;
-
-
-                tbody.appendChild(
-                    tr
+            const tr =
+                document.createElement(
+                    "tr"
                 );
 
-            }
-        );
+
+            tr.innerHTML = `
+
+                <td>
+                    ${escapeHtml(
+                        item.location
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        item.trips
+                    )}
+                </td>
+
+                <td>
+                    ${formatNumber(
+                        item.totalParticipants
+                    )}
+                </td>
+
+            `;
+
+
+            tbody.appendChild(
+                tr
+            );
+
+        });
 
 }
+
+
 
 
 /* ==========================================================
