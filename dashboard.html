@@ -8461,331 +8461,79 @@ window.CommunicationsCentre = (() => {
 
 async function importSheet() {
 
-    console.log(
-        "===== IMPORT BUTTON CLICKED ====="
+    const url = document.getElementById("sheetUrl").value;
+    const eventDate = document.getElementById("importEventDate").value;
+    const eventType = document.getElementById("importEventType").value;
+    const eventName = document.getElementById("importEventName").value;
+
+    const user = JSON.parse(
+        localStorage.getItem("mp_user")
     );
 
+    if (!url || !eventDate || !eventName) {
 
-    const url =
-        document.getElementById(
-            "sheetUrl"
-        ).value.trim();
-
-
-    const eventDate =
-        document.getElementById(
-            "importEventDate"
-        ).value;
-
-
-    const eventType =
-        document.getElementById(
-            "importEventType"
-        ).value;
-
-
-    const eventName =
-        document.getElementById(
-            "importEventName"
-        ).value.trim();
-
-
-    console.log(
-        "URL:",
-        url
-    );
-
-
-    console.log(
-        "Event Date:",
-        eventDate
-    );
-
-
-    console.log(
-        "Event Type:",
-        eventType
-    );
-
-
-    console.log(
-        "Event Name:",
-        eventName
-    );
-
-
-    //---------------------------------------
-    // User
-    //---------------------------------------
-
-    const user =
-        JSON.parse(
-            localStorage.getItem(
-                "mp_user"
-            ) || "null"
-        );
-
-
-    console.log(
-        "User:",
-        user
-    );
-
-
-    //---------------------------------------
-    // Validation
-    //---------------------------------------
-
-    if (
-        !url ||
-        !eventDate ||
-        !eventName
-    ) {
-
-        alert(
-            "Please complete all fields."
-        );
-
+        alert("Please complete all fields.");
         return;
 
     }
-
-
-    //---------------------------------------
-    // Import
-    //---------------------------------------
 
     try {
 
         let result;
 
+        // =====================================
+        // SHORT TERM MISSION TRIP
+        // =====================================
+        if (eventType === "MISSION") {
 
-        //-----------------------------------
-        // Mission
-        //-----------------------------------
-
-        if (
-            eventType === "MISSION"
-        ) {
-
-            console.log(
-                ">>> CALLING importMissionTripSheet"
-            );
-
-
-            result =
-                await API.post(
-                    "importMissionTripSheet",
-                    {
-
-                        url:
-                            url,
-
-                        missionDate:
-                            eventDate,
-
-                        eventName:
-                            eventName,
-
-                        importedBy:
-                            user?.email || ""
-
-                    }
-                );
-
-        }
-
-
-        //-----------------------------------
-        // External Event
-        //-----------------------------------
-
-        else {
-
-            console.log(
-                ">>> CALLING importExternalSheet"
-            );
-
-
-            result =
-                await API.post(
-                    "importExternalSheet",
-                    {
-
-                        url:
-                            url,
-
-                        eventDate:
-                            eventDate,
-
-                        eventType:
-                            eventType,
-
-                        eventName:
-                            eventName,
-
-                        importedBy:
-                            user?.email || ""
-
-                    }
-                );
-
-        }
-
-
-        //---------------------------------------
-        // Result
-        //---------------------------------------
-
-        console.log(
-            ">>> IMPORT RESULT:",
-            result
-        );
-
-
-        //---------------------------------------
-        // Permission Required
-        //---------------------------------------
-
-        if (
-            result &&
-            result.accessRequired
-        ) {
-
-            const systemEmail =
-                result.data?.systemEmail ||
-                "";
-
-
-            const spreadsheetId =
-                result.data?.spreadsheetId ||
-                "";
-
-
-            let message =
-                "The Missions Management System does not currently have access to this spreadsheet.\n\n";
-
-
-            if (
-                systemEmail
-            ) {
-
-                message +=
-                    "Please share the spreadsheet with this Google account:\n\n" +
-                    systemEmail +
-                    "\n\n";
-
-            }
-
-
-            message +=
-                "After sharing the spreadsheet, click Import again to retry.";
-
-
-            alert(
-                message
-            );
-
-
-            console.warn(
-                "IMPORT ACCESS REQUIRED",
+            result = await API.post(
+                "importMissionTripSheet",
                 {
-
-                    systemEmail:
-                        systemEmail,
-
-                    spreadsheetId:
-                        spreadsheetId,
-
-                    sourceUrl:
-                        url
-
+                    url: url,
+                    missionDate: eventDate,
+                    eventName: eventName,
+                    importedBy: user.email
                 }
             );
 
+        }
 
-            return;
+        // =====================================
+        // GENERAL EVENTS
+        // =====================================
+        else {
+
+            result = await API.post(
+                "importExternalSheet",
+                {
+                    url: url,
+                    eventDate: eventDate,
+                    eventType: eventType,
+                    eventName: eventName,
+                    importedBy: user.email
+                }
+            );
 
         }
 
+        console.log(result);
 
-        //---------------------------------------
-        // Already Imported
-        //---------------------------------------
+        if (result.success) {
 
-        if (
-            result &&
-            result.alreadyImported
-        ) {
+            alert(result.message);
 
-            alert(
-                result.message ||
-                "This event has already been imported."
-            );
+        } else {
 
-
-            return;
+            alert(result.message);
 
         }
-
-
-        //---------------------------------------
-        // Success
-        //---------------------------------------
-
-        if (
-            result &&
-            result.success
-        ) {
-
-            alert(
-                result.message ||
-                "Import completed."
-            );
-
-
-            console.log(
-                "Imported rows:",
-                result.importedRows ??
-                result.data?.rowsImported ??
-                0
-            );
-
-
-            return;
-
-        }
-
-
-        //---------------------------------------
-        // Server Error
-        //---------------------------------------
-
-        alert(
-            result?.message ||
-            "Import failed."
-        );
-
-
-        console.error(
-            "IMPORT FAILED:",
-            result
-        );
 
     }
-
     catch (err) {
 
-        console.error(
-            ">>> IMPORT ERROR:",
-            err
-        );
+        console.error("IMPORT ERROR:", err);
 
-
-        alert(
-            err?.message ||
-            "Unable to complete the import."
-        );
+        alert(err.message || "Server error");
 
     }
 
