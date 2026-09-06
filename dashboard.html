@@ -10713,121 +10713,303 @@ function getParticipantIdentifier(person) {
 PARTICIPANT JOURNEY
 ========================================================== */
 
+
 async function openParticipantJourney(
-identifier
+    identifier
 ) {
 
+    /*
+     * ==========================================================
+     * OPEN PARTICIPANT JOURNEY
+     * ==========================================================
+     *
+     * identifier should normally be:
+     *
+     *     mobile:93253233
+     *
+     * The backend MI_getParticipantJourney() is responsible
+     * for normalising the identifier.
+     *
+     * ==========================================================
+     */
 
-if (!identifier) {
 
-    alert(
-        "No participant identifier available."
+    if (!identifier) {
+
+        alert(
+            "No participant identifier available."
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * ----------------------------------------------------------
+     * SHOW LOADING
+     * ----------------------------------------------------------
+     */
+
+    showIntelligenceLoading(
+        true,
+        "Loading participant journey..."
     );
 
-    return;
 
-}
+    try {
 
+        /*
+         * ------------------------------------------------------
+         * DEBUG IDENTIFIER
+         * ------------------------------------------------------
+         */
 
-showIntelligenceLoading(
-    true,
-    "Loading participant journey..."
-);
+        console.log(
+            "========================================"
+        );
 
+        console.log(
+            "=== OPEN PARTICIPANT JOURNEY ==="
+        );
 
-try {
+        console.log(
+            "identifier:",
+            identifier
+        );
 
-    const result =
-        await API.post(
-            "getParticipantJourney",
-            {
-                identifier:
-                    identifier
-            }
+        console.log(
+            "identifier type:",
+            typeof identifier
         );
 
 
-    console.log(
-        "PARTICIPANT JOURNEY:",
-        result
-    );
+        /*
+         * ------------------------------------------------------
+         * BUILD REQUEST
+         * ------------------------------------------------------
+         */
+
+        const requestPayload = {
+
+            identifier:
+                identifier
+
+        };
 
 
-    if (
-        !result ||
-        result.success === false
+        console.log(
+            "REQUEST PAYLOAD:",
+            requestPayload
+        );
+
+
+        /*
+         * ------------------------------------------------------
+         * CALL API
+         * ------------------------------------------------------
+         *
+         * IMPORTANT:
+         * This API is called ONLY ONCE.
+         *
+         * ------------------------------------------------------
+         */
+
+        const result =
+            await API.post(
+                "getParticipantJourney",
+                requestPayload
+            );
+
+
+        /*
+         * ------------------------------------------------------
+         * LOG RAW API RESULT
+         * ------------------------------------------------------
+         */
+
+        console.log(
+            "API RESULT:",
+            result
+        );
+
+
+        /*
+         * ------------------------------------------------------
+         * VALIDATE API RESPONSE
+         * ------------------------------------------------------
+         */
+
+        if (
+            !result
+        ) {
+
+            throw new Error(
+                "No response received from participant journey API."
+            );
+
+        }
+
+
+        if (
+            result.success === false
+        ) {
+
+            throw new Error(
+                result.message ||
+                "Unable to load participant journey."
+            );
+
+        }
+
+
+        /*
+         * ------------------------------------------------------
+         * EXTRACT DATA
+         * ------------------------------------------------------
+         */
+
+        const data =
+            result.data ||
+            result;
+
+
+        console.log(
+            "PARTICIPANT JOURNEY DATA:",
+            data
+        );
+
+
+        /*
+         * ------------------------------------------------------
+         * CHECK PARTICIPANT FOUND
+         * ------------------------------------------------------
+         */
+
+        if (
+            data.found === false
+        ) {
+
+            console.error(
+                "PARTICIPANT JOURNEY: PARTICIPANT NOT FOUND",
+                {
+                    identifier:
+                        identifier,
+
+                    response:
+                        result,
+
+                    data:
+                        data
+                }
+            );
+
+
+            throw new Error(
+                "Participant not found."
+            );
+
+        }
+
+
+        /*
+         * ------------------------------------------------------
+         * RENDER JOURNEY
+         * ------------------------------------------------------
+         */
+
+        console.log(
+            "RENDERING PARTICIPANT JOURNEY"
+        );
+
+
+        renderParticipantJourney(
+            data
+        );
+
+
+        /*
+         * ------------------------------------------------------
+         * OPEN DETAILS MODAL
+         * ------------------------------------------------------
+         */
+
+        const modal =
+            document.getElementById(
+                "detailsModal"
+            );
+
+
+        if (
+            modal
+        ) {
+
+            showModalElement(
+                modal
+            );
+
+        }
+
+
+        console.log(
+            "PARTICIPANT JOURNEY OPENED SUCCESSFULLY"
+        );
+
+
+    }
+
+    catch (
+        error
     ) {
 
-        throw new Error(
-            result?.message ||
+        /*
+         * ------------------------------------------------------
+         * ERROR HANDLING
+         * ------------------------------------------------------
+         */
+
+        console.error(
+            "========================================"
+        );
+
+        console.error(
+            "PARTICIPANT JOURNEY ERROR:",
+            error
+        );
+
+        console.error(
+            "PARTICIPANT JOURNEY IDENTIFIER:",
+            identifier
+        );
+
+        console.error(
+            "========================================"
+        );
+
+
+        alert(
+            error.message ||
             "Unable to load participant journey."
         );
 
     }
 
+    finally {
 
-    const data =
-        result.data ||
-        result;
+        /*
+         * ------------------------------------------------------
+         * HIDE LOADING
+         * ------------------------------------------------------
+         */
 
-
-    if (
-        data.found === false
-    ) {
-
-        throw new Error(
-            "Participant not found."
-        );
-
-    }
-
-
-    renderParticipantJourney(
-        data
-    );
-
-
-    const modal =
-        document.getElementById(
-            "detailsModal"
-        );
-
-
-    if (modal) {
-
-        showModalElement(
-            modal
+        showIntelligenceLoading(
+            false
         );
 
     }
 
 }
 
-catch (error) {
-
-    console.error(
-        "PARTICIPANT JOURNEY ERROR:",
-        error
-    );
-
-
-    alert(
-        error.message ||
-        "Unable to load participant journey."
-    );
-
-}
-
-finally {
-
-    showIntelligenceLoading(
-        false
-    );
-
-}
-
-
-}
 
 /* ==========================================================
 PARTICIPANT JOURNEY RENDER
