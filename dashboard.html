@@ -10685,24 +10685,28 @@ return [
 PARTICIPANT IDENTIFIER
 ========================================================== */
 
-function getParticipantIdentifier(
-person
-) {
+function getParticipantIdentifier(person) {
 
+    console.log(
+        "PARTICIPANT RECORD:",
+        person
+    );
 
-return (
+    const identifier =
+        person.personID ||
+        person.personId ||
+        person.personKey ||
+        person.email ||
+        person.mobile ||
+        person.name ||
+        "";
 
-    person.personID ||
-    person.personId ||
-    person.personKey ||
-    person.email ||
-    person.mobile ||
-    person.name ||
-    ""
+    console.log(
+        "GENERATED PARTICIPANT IDENTIFIER:",
+        identifier
+    );
 
-);
-
-
+    return identifier;
 }
 
 /* ==========================================================
