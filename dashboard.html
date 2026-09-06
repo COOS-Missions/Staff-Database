@@ -10607,21 +10607,30 @@ people.forEach(
 
         if (button) {
 
-            button.addEventListener(
-                "click",
-                event => {
+    button.addEventListener(
+        "click",
+        event => {
 
-                    event.stopPropagation();
+            event.stopPropagation();
 
+            console.log(
+                "PARTICIPANT BUTTON IDENTIFIER:",
+                identifier
+            );
 
-                    openParticipantJourney(
-                        identifier
-                    );
+            console.log(
+                "PARTICIPANT BUTTON IDENTIFIER TYPE:",
+                typeof identifier
+            );
 
-                }
+            openParticipantJourney(
+                identifier
             );
 
         }
+    );
+
+}
 
 
         tbody.appendChild(
