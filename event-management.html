@@ -610,8 +610,19 @@ let participants = [];
 let currentEvent = null;
 
 // Load page
-window.onload = function () {
-    loadEvents();
+// ==========================================
+// Load page
+// ==========================================
+
+window.onload = async function () {
+
+    const params =
+        new URLSearchParams(window.location.search);
+
+    const eventId =
+        params.get("event");
+
+    await loadEvents();
 
     document
         .getElementById("searchBox")
@@ -620,6 +631,15 @@ window.onload = function () {
     document
         .getElementById("statusFilter")
         .addEventListener("change", filterEvents);
+
+    // If returning from Walk-In Registration,
+    // automatically reopen the Manage area
+    if (eventId) {
+
+        await viewParticipants(eventId);
+
+    }
+
 };
 
 // ==========================================
