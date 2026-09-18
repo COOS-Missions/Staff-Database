@@ -446,13 +446,16 @@ alert(
 
 
 
-function goBack(){
+function goBack() {
+  const params = new URLSearchParams(window.location.search);
+  const eventId = params.get('event');
 
-
-window.location.href =
-"event-management.html";
-
-
+  if (eventId) {
+    window.location.href =
+      `event-management.html?event=${encodeURIComponent(eventId)}`;
+  } else {
+    window.location.href = 'event-management.html';
+  }
 }
 
 
