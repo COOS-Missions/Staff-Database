@@ -447,15 +447,19 @@ alert(
 
 
 function goBack() {
-  const params = new URLSearchParams(window.location.search);
-  const eventId = params.get('event');
 
-  if (eventId) {
-    window.location.href =
-      `event-management.html?event=${encodeURIComponent(eventId)}`;
-  } else {
-    window.location.href = 'event-management.html';
-  }
+    if (spreadsheetId) {
+
+        window.location.href =
+            `event-management.html?event=${encodeURIComponent(spreadsheetId)}`;
+
+    } else {
+
+        window.location.href =
+            "event-management.html";
+
+    }
+
 }
 
 
