@@ -4184,8 +4184,16 @@ function initialiseDashboard() {
 
 
   /*
-   * Check whether another page has
-   * requested a specific dashboard section.
+   * Read navigation state from URL.
+   *
+   * Normal dashboard:
+   * dashboard.html
+   *
+   * Event Management:
+   * dashboard.html?section=events
+   *
+   * Return to specific event:
+   * dashboard.html?section=events&event=XXXX
    */
 
   const params =
@@ -4198,9 +4206,27 @@ function initialiseDashboard() {
     params.get("section");
 
 
-  if (requestedSection) {
+  const requestedEvent =
+    params.get("event");
 
-    showSection(requestedSection);
+
+  if (requestedSection === "events") {
+
+    showSection("events");
+
+
+    /*
+     * If an event was supplied,
+     * Event Management will reopen
+     * that event after initialization.
+     */
+
+    if (requestedEvent) {
+
+      EventManagement.openEventAfterInit =
+        requestedEvent;
+
+    }
 
   } else {
 
@@ -6083,32 +6109,59 @@ window.EventManagement = (function () {
      INITIALISE
   ====================================================== */
 
-  async function init() {
+async function init() {
 
-    /*
-     * The dashboard can call showSection('events')
-     * multiple times.
-     *
-     * Do not create duplicate listeners.
-     */
+  /*
+   * The dashboard can call showSection('events')
+   * multiple times.
+   *
+   * Do not create duplicate listeners.
+   */
 
-    if (!initialised) {
+  if (!initialised) {
 
-      bindEvents();
+    bindEvents();
 
-      initialised = true;
-
-    }
-
-
-    /*
-     * Refresh the event data every time the user
-     * opens Event Management.
-     */
-
-    await loadEvents();
+    initialised = true;
 
   }
+
+
+  /*
+   * Refresh the event data every time the user
+   * opens Event Management.
+   */
+
+  await loadEvents();
+
+
+  /*
+   * Check whether the dashboard URL contains
+   * an event to reopen.
+   */
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+
+  const eventId =
+    params.get("event");
+
+
+  /*
+   * If an event ID exists, automatically open
+   * that event's Manage Participants page.
+   */
+
+  if (eventId) {
+
+    await viewParticipants(eventId);
+
+  }
+
+}
 
 
 
