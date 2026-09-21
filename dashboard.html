@@ -4182,10 +4182,33 @@ function initialiseDashboard() {
 
   applyRoleAccess();
 
-  showSection("home");
+
+  /*
+   * Check whether another page has
+   * requested a specific dashboard section.
+   */
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+
+  const requestedSection =
+    params.get("section");
+
+
+  if (requestedSection) {
+
+    showSection(requestedSection);
+
+  } else {
+
+    showSection("home");
+
+  }
 
 }
-
 
 
 /* =========================================================
