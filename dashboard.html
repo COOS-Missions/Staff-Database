@@ -7563,106 +7563,253 @@ async function deleteEvent(id) {
      RETRIEVE QR CODE
   ======================================================= */
 
-  async function retrieveQRCode(
-    spreadsheetId
-  ) {
+ /* =======================================================
+   RETRIEVE QR CODE
+======================================================= */
 
-    if (!spreadsheetId) {
+async function retrieveQRCode(spreadsheetId) {
 
-      alert(
-        "Event Spreadsheet ID is missing."
-      );
+  if (!spreadsheetId) {
 
-      return;
+    alert("Event Spreadsheet ID is missing.");
 
-    }
-
-
-    showLoading();
-
-
-    try {
-
-      const result =
-        await runScript(
-          "retrieveEventQRCode",
-          {
-            spreadsheetId:
-              spreadsheetId
-          }
-        );
-
-
-      if (
-        !result
-      ) {
-
-        throw new Error(
-          "No QR code information was returned."
-        );
-
-      }
-
-
-      console.log(
-        "Event QR Code:",
-        result
-      );
-
-
-      /*
-       * Temporary verification.
-       *
-       * This opens the published Google Form.
-       *
-       * Once confirmed working,
-       * replace this with the QR modal.
-       */
-
-      if (
-        result.publishedUrl
-      ) {
-
-        window.open(
-          result.publishedUrl,
-          "_blank"
-        );
-
-      }
-      else {
-
-        throw new Error(
-          "Published Google Form URL was not returned."
-        );
-
-      }
-
-    }
-
-
-    catch (err) {
-
-      console.error(
-        "retrieveQRCode:",
-        err
-      );
-
-
-      alert(
-        err.message ||
-        "Unable to retrieve the QR code."
-      );
-
-    }
-
-
-    finally {
-
-      hideLoading();
-
-    }
+    return;
 
   }
+
+  showLoading();
+
+  try {
+
+    const result =
+      await runScript(
+        "retrieveEventQRCode",
+        {
+          spreadsheetId:
+            spreadsheetId
+        }
+      );
+
+    if (!result) {
+
+      throw new Error(
+        "No QR code information was returned."
+      );
+
+    }
+
+    const publishedUrl =
+      result.publishedUrl;
+
+    if (!publishedUrl) {
+
+      throw new Error(
+        "Published Google Form URL was not returned."
+      );
+
+    }
+
+    /*
+     * DO NOT OPEN THE FORM.
+     *
+     * Generate the QR code from the
+     * published Google Form URL.
+     */
+
+    const qrUrl =
+      "https://api.qrserver.com/v1/create-qr-code/" +
+      "?size=400x400" +
+      "&margin=10" +
+      "&data=" +
+      encodeURIComponent(
+        publishedUrl
+      );
+
+    showQRCodeModal(
+      result.eventName ||
+      "Event Registration",
+      qrUrl
+    );
+
+  }
+
+  catch (err) {
+
+    console.error(
+      "retrieveQRCode:",
+      err
+    );
+
+    alert(
+      err.message ||
+      "Unable to retrieve the QR code."
+    );
+
+  }
+
+  finally {
+
+    hideLoading();
+
+  }
+
+}
+
+
+/* =======================================================
+   QR CODE MODAL
+======================================================= */
+
+function showQRCodeModal(
+  eventName,
+  qrUrl
+) {
+
+  closeQRCodeModal();
+
+  const overlay =
+    document.createElement("div");
+
+  overlay.id =
+    "em_qrModal";
+
+  overlay.style.cssText = `
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  const modal =
+    document.createElement("div");
+
+  modal.style.cssText = `
+    background: #ffffff;
+    width: 420px;
+    max-width: 100%;
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  `;
+
+  modal.innerHTML = `
+
+    <div
+      style="
+        font-size:22px;
+        font-weight:700;
+        margin-bottom:8px;
+      "
+    >
+      Event QR Code
+    </div>
+
+    <div
+      style="
+        font-size:15px;
+        color:#666;
+        margin-bottom:20px;
+      "
+    >
+      ${escapeHtml(eventName)}
+    </div>
+
+    <div
+      style="
+        display:flex;
+        justify-content:center;
+        margin-bottom:20px;
+      "
+    >
+      <img
+        src="${qrUrl}"
+        alt="Event Registration QR Code"
+        style="
+          width:300px;
+          height:300px;
+          display:block;
+        "
+      >
+    </div>
+
+    <div
+      style="
+        font-size:14px;
+        color:#666;
+        margin-bottom:20px;
+      "
+    >
+      Scan this QR code to register for the event.
+    </div>
+
+    <button
+      type="button"
+      onclick="EventManagement.closeQRCodeModal()"
+      style="
+        padding:10px 24px;
+        border:none;
+        border-radius:8px;
+        background:#1a73e8;
+        color:white;
+        font-size:14px;
+        font-weight:600;
+        cursor:pointer;
+      "
+    >
+      Close
+    </button>
+
+  `;
+
+  overlay.appendChild(
+    modal
+  );
+
+  overlay.addEventListener(
+    "click",
+    function(event) {
+
+      if (
+        event.target === overlay
+      ) {
+
+        closeQRCodeModal();
+
+      }
+
+    }
+  );
+
+  document.body.appendChild(
+    overlay
+  );
+
+}
+
+
+/* =======================================================
+   CLOSE QR CODE MODAL
+======================================================= */
+
+function closeQRCodeModal() {
+
+  const modal =
+    document.getElementById(
+      "em_qrModal"
+    );
+
+  if (modal) {
+
+    modal.remove();
+
+  }
+
+}
 
 
 
