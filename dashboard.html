@@ -7058,27 +7058,41 @@ async function init() {
 
 
 
-  /* =======================================================
-     CLOSE PARTICIPANT MODAL
-  ====================================================== */
+/* =======================================================
+   CLOSE PARTICIPANT MODAL
+======================================================= */
 
-  function closeModal() {
+function closeModal() {
 
-    const modal =
-      document.getElementById(
-        "em_participantModal"
-      );
+  const modal =
+    document.getElementById(
+      "em_participantModal"
+    );
 
+  if (modal) {
 
-    if (modal) {
-
-      modal.style.display =
-        "none";
-
-    }
+    modal.style.display =
+      "none";
 
   }
 
+  /* -------------------------------------------------------
+     REMOVE EVENT DEEP LINK
+     Keep ?section=events
+  ------------------------------------------------------- */
+
+  const url =
+    new URL(window.location.href);
+
+  url.searchParams.delete("event");
+
+  window.history.replaceState(
+    {},
+    "",
+    url
+  );
+
+}
 
 
   /* =======================================================
