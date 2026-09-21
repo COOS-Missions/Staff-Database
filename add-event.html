@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 
 <html lang="en">
@@ -129,29 +130,6 @@ select:focus,
 textarea:focus{
     outline:none;
     border-color:#2563eb;
-}
-
-/* ================= HEADER IMAGE ================= */
-
-.imageUpload{
-    border:2px dashed #cbd5e1;
-    border-radius:8px;
-    padding:25px;
-    text-align:center;
-    background:#f8fafc;
-    cursor:pointer;
-}
-
-.imageUpload:hover{
-    background:#f1f5f9;
-}
-
-.imagePreview{
-    max-width:100%;
-    max-height:220px;
-    margin-top:15px;
-    border-radius:8px;
-    display:none;
 }
 
 /* ================= QUESTIONS ================= */
@@ -335,21 +313,21 @@ textarea:focus{
 
 <div class="header">
 
+    <h2>➕ Add Event</h2>
 
-<h2>➕ Add Event</h2>
+    <button
+        class="backBtn"
+        onclick="window.location='dashboard.html#events'">
 
-<button
-    class="backBtn"
-    onclick="window.location='dashboard.html#events'">
+        ← Event Management
 
-    ← Event Management
-
-</button>
-
+    </button>
 
 </div>
 
+
 <div class="container">
+
 
 <!-- =====================================================
      SUCCESS
@@ -359,90 +337,93 @@ textarea:focus{
     class="successCard"
     id="successCard">
 
+    <h2>✓ Event Created Successfully</h2>
 
-<h2>✓ Event Created Successfully</h2>
+    <p>
+        The Google Form has been created and the event has
+        been added to the Event Registry as ACTIVE.
+    </p>
 
-<p>
-    The Google Form has been created and the event has
-    been added to the Event Registry as ACTIVE.
-</p>
 
-<div class="resultGrid">
+    <div class="resultGrid">
 
-    <div class="resultBox">
 
-        <label>Event Name</label>
+        <div class="resultBox">
 
-        <strong id="resultEventName"></strong>
+            <label>Event Name</label>
+
+            <strong id="resultEventName"></strong>
+
+        </div>
+
+
+        <div class="resultBox">
+
+            <label>Event Spreadsheet ID</label>
+
+            <strong id="resultSpreadsheetId"></strong>
+
+        </div>
+
+
+        <div class="resultBox">
+
+            <label>Google Form</label>
+
+            <a
+                id="resultFormUrl"
+                target="_blank"
+                rel="noopener">
+
+                Open Form
+
+            </a>
+
+        </div>
+
+
+        <div class="resultBox">
+
+            <label>Responder URL</label>
+
+            <a
+                id="resultResponderUrl"
+                target="_blank"
+                rel="noopener">
+
+                Open Registration Form
+
+            </a>
+
+        </div>
+
 
     </div>
 
 
-    <div class="resultBox">
+    <div class="qrBox">
 
-        <label>Event Spreadsheet ID</label>
+        <h3>Registration QR Code</h3>
 
-        <strong id="resultSpreadsheetId"></strong>
+        <img
+            id="resultQr"
+            alt="Registration QR Code">
 
-    </div>
+        <br><br>
 
+        <button
+            class="createBtn"
+            onclick="window.location='dashboard.html'">
 
-    <div class="resultBox">
+            Return to Event Management
 
-        <label>Google Form</label>
-
-        <a
-            id="resultFormUrl"
-            target="_blank"
-            rel="noopener">
-
-            Open Form
-
-        </a>
+        </button>
 
     </div>
 
-
-    <div class="resultBox">
-
-        <label>Responder URL</label>
-
-        <a
-            id="resultResponderUrl"
-            target="_blank"
-            rel="noopener">
-
-            Open Registration Form
-
-        </a>
-
-    </div>
 
 </div>
 
-
-<div class="qrBox">
-
-    <h3>Registration QR Code</h3>
-
-    <img
-        id="resultQr"
-        alt="Registration QR Code">
-
-    <br><br>
-
-    <button
-        class="createBtn"
-        onclick="window.location='dashboard.html'">
-
-        Return to Event Management
-
-    </button>
-
-</div>
-
-
-</div>
 
 <!-- =====================================================
      EVENT DETAILS
@@ -453,234 +434,200 @@ textarea:focus{
     id="eventFormCard">
 
 
-<h2>Event Details</h2>
+    <h2>Event Details</h2>
 
-<p class="cardDescription">
+    <p class="cardDescription">
 
-    Enter the information that will be used to create the
-    Google Form and Event Registry record.
+        Enter the information that will be used to create
+        the Google Form and Event Registry record.
 
-</p>
-
-
-<div class="formGrid">
+    </p>
 
 
-    <!-- EVENT DATE -->
+    <div class="formGrid">
 
-    <div class="formGroup">
 
-        <label>
-            Event Date
-            <span class="required">*</span>
-        </label>
+        <!-- EVENT DATE -->
 
-        <input
-            type="date"
-            id="eventDate"
-            required>
+        <div class="formGroup">
+
+            <label>
+
+                Event Date
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                type="date"
+                id="eventDate"
+                required>
+
+        </div>
+
+
+        <!-- EVENT NAME -->
+
+        <div class="formGroup">
+
+            <label>
+
+                Event Name
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                type="text"
+                id="eventName"
+                placeholder="e.g. Kingdom Builders"
+                required>
+
+        </div>
+
+
+        <!-- EVENT TYPE -->
+
+        <div class="formGroup">
+
+            <label>
+
+                Event Type
+                <span class="required">*</span>
+
+            </label>
+
+            <select
+                id="eventType"
+                required>
+
+                <option value="">
+                    Select Event Type
+                </option>
+
+                <option value="Event">
+                    Event
+                </option>
+
+                <option value="Course">
+                    Course
+                </option>
+
+                <option value="Workshop">
+                    Workshop
+                </option>
+
+                <option value="Conference">
+                    Conference
+                </option>
+
+                <option value="Service">
+                    Service
+                </option>
+
+                <option value="Outreach">
+                    Outreach
+                </option>
+
+                <option value="Other">
+                    Other
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <!-- VENUE -->
+
+        <div class="formGroup">
+
+            <label>
+
+                Venue
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                type="text"
+                id="venue"
+                placeholder="e.g. COOS Main Hall"
+                required>
+
+        </div>
+
+
+        <!-- LOCATION -->
+
+        <div class="formGroup">
+
+            <label>
+
+                Location
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                type="text"
+                id="location"
+                placeholder="e.g. Singapore"
+                required>
+
+        </div>
+
+
+        <!-- START TIME -->
+
+        <div class="formGroup">
+
+            <label>
+                Start Time
+            </label>
+
+            <input
+                type="time"
+                id="startTime">
+
+        </div>
+
+
+        <!-- END TIME -->
+
+        <div class="formGroup">
+
+            <label>
+                End Time
+            </label>
+
+            <input
+                type="time"
+                id="endTime">
+
+        </div>
+
+
+        <!-- DESCRIPTION -->
+
+        <div class="formGroup full">
+
+            <label>
+                Event Description
+            </label>
+
+            <textarea
+                id="eventDescription"
+                placeholder="Describe the event..."></textarea>
+
+        </div>
+
 
     </div>
 
-
-    <!-- EVENT NAME -->
-
-    <div class="formGroup">
-
-        <label>
-            Event Name
-            <span class="required">*</span>
-        </label>
-
-        <input
-            type="text"
-            id="eventName"
-            placeholder="e.g. Kingdom Builders"
-            required>
-
-    </div>
-
-
-    <!-- EVENT TYPE -->
-
-    <div class="formGroup">
-
-        <label>
-            Event Type
-            <span class="required">*</span>
-        </label>
-
-        <select
-            id="eventType"
-            required>
-
-            <option value="">
-                Select Event Type
-            </option>
-
-            <option value="Event">
-                Event
-            </option>
-
-            <option value="Course">
-                Course
-            </option>
-
-            <option value="Workshop">
-                Workshop
-            </option>
-
-            <option value="Conference">
-                Conference
-            </option>
-
-            <option value="Service">
-                Service
-            </option>
-
-            <option value="Outreach">
-                Outreach
-            </option>
-
-            <option value="Other">
-                Other
-            </option>
-
-        </select>
-
-    </div>
-
-
-    <!-- VENUE -->
-
-    <div class="formGroup">
-
-        <label>
-            Venue
-            <span class="required">*</span>
-        </label>
-
-        <input
-            type="text"
-            id="venue"
-            placeholder="e.g. COOS Main Hall"
-            required>
-
-    </div>
-
-
-    <!-- LOCATION -->
-
-    <div class="formGroup">
-
-        <label>
-            Location
-            <span class="required">*</span>
-        </label>
-
-        <input
-            type="text"
-            id="location"
-            placeholder="e.g. Singapore"
-            required>
-
-    </div>
-
-
-    <!-- START TIME -->
-
-    <div class="formGroup">
-
-        <label>
-            Start Time
-        </label>
-
-        <input
-            type="time"
-            id="startTime">
-
-    </div>
-
-
-    <!-- END TIME -->
-
-    <div class="formGroup">
-
-        <label>
-            End Time
-        </label>
-
-        <input
-            type="time"
-            id="endTime">
-
-    </div>
-
-
-    <!-- DESCRIPTION -->
-
-    <div class="formGroup full">
-
-        <label>
-            Event Description
-        </label>
-
-        <textarea
-            id="eventDescription"
-            placeholder="Describe the event..."></textarea>
-
-    </div>
 
 </div>
 
-
-</div>
-
-<!-- =====================================================
-     GOOGLE FORM HEADER
-===================================================== -->
-
-<div class="card">
-
-
-<h2>Google Form Header</h2>
-
-<p class="cardDescription">
-
-    Upload the event image to be used for the event
-    registration form.
-
-</p>
-
-
-<div
-    class="imageUpload"
-    onclick="document.getElementById('headerImage').click()">
-
-    <strong>
-        Click to upload event header image
-    </strong>
-
-    <br>
-
-    <small>
-        Recommended: wide landscape image
-    </small>
-
-    <input
-        type="file"
-        id="headerImage"
-        accept="image/*"
-        style="display:none;">
-
-    <img
-        id="imagePreview"
-        class="imagePreview">
-
-</div>
-
-
-</div>
 
 <!-- =====================================================
      STANDARD PARAMETERS
@@ -689,104 +636,114 @@ textarea:focus{
 <div class="card">
 
 
-<h2>Registration Information</h2>
+    <h2>Registration Information</h2>
 
-<p class="cardDescription">
+    <p class="cardDescription">
 
-    These standard registration fields will be included
-    in every Event Form.
+        These standard registration fields will be included
+        in every Event Form.
 
-</p>
-
-
-<div class="formGrid">
+    </p>
 
 
-    <div class="formGroup">
+    <div class="formGrid">
 
-        <label>
-            Name
-            <span class="required">*</span>
-        </label>
 
-        <input
-            value="Name"
-            disabled>
+        <div class="formGroup">
+
+            <label>
+
+                Name
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                value="Name"
+                disabled>
+
+        </div>
+
+
+        <div class="formGroup">
+
+            <label>
+
+                Email Address
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                value="Email Address"
+                disabled>
+
+        </div>
+
+
+        <div class="formGroup">
+
+            <label>
+
+                Contact Number
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                value="Contact Number"
+                disabled>
+
+        </div>
+
+
+        <div class="formGroup">
+
+            <label>
+                Church
+            </label>
+
+            <input
+                value="Church"
+                disabled>
+
+        </div>
+
+
+        <div class="formGroup">
+
+            <label>
+                Referral Source
+            </label>
+
+            <input
+                value="How did you hear about this event?"
+                disabled>
+
+        </div>
+
+
+        <div class="formGroup">
+
+            <label>
+
+                PDPA Consent
+                <span class="required">*</span>
+
+            </label>
+
+            <input
+                value="PDPA Consent"
+                disabled>
+
+        </div>
+
 
     </div>
 
-
-    <div class="formGroup">
-
-        <label>
-            Email Address
-            <span class="required">*</span>
-        </label>
-
-        <input
-            value="Email Address"
-            disabled>
-
-    </div>
-
-
-    <div class="formGroup">
-
-        <label>
-            Contact Number
-            <span class="required">*</span>
-        </label>
-
-        <input
-            value="Contact Number"
-            disabled>
-
-    </div>
-
-
-    <div class="formGroup">
-
-        <label>
-            Church
-        </label>
-
-        <input
-            value="Church"
-            disabled>
-
-    </div>
-
-
-    <div class="formGroup">
-
-        <label>
-            Referral Source
-        </label>
-
-        <input
-            value="How did you hear about this event?"
-            disabled>
-
-    </div>
-
-
-    <div class="formGroup">
-
-        <label>
-            PDPA Consent
-            <span class="required">*</span>
-        </label>
-
-        <input
-            value="PDPA Consent"
-            disabled>
-
-    </div>
 
 </div>
 
-
-</div>
 
 <!-- =====================================================
      CUSTOM QUESTIONS
@@ -795,31 +752,32 @@ textarea:focus{
 <div class="card">
 
 
-<h2>Event-Specific Questions</h2>
+    <h2>Event-Specific Questions</h2>
 
-<p class="cardDescription">
+    <p class="cardDescription">
 
-    Add questions that are specific to this event.
-    These will be added to the Google Form after the
-    standard registration fields.
+        Add questions that are specific to this event.
+        These will be added to the Google Form after the
+        standard registration fields.
 
-</p>
-
-
-<div id="questionsContainer"></div>
+    </p>
 
 
-<button
-    type="button"
-    class="addQuestionBtn"
-    onclick="addQuestion()">
+    <div id="questionsContainer"></div>
 
-    + Add Question
 
-</button>
+    <button
+        type="button"
+        class="addQuestionBtn"
+        onclick="addQuestion()">
+
+        + Add Question
+
+    </button>
 
 
 </div>
+
 
 <!-- =====================================================
      CREATE
@@ -828,34 +786,38 @@ textarea:focus{
 <div class="card">
 
 
-<div class="actions">
-
-    <button
-        type="button"
-        class="cancelBtn"
-        onclick="window.location='dashboard.html#events'">
-
-        Cancel
-
-    </button>
+    <div class="actions">
 
 
-    <button
-        type="button"
-        class="createBtn"
-        id="createBtn"
-        onclick="handleCreateEvent()">
+        <button
+            type="button"
+            class="cancelBtn"
+            onclick="window.location='dashboard.html#events'">
 
-        🚀 Create Event
+            Cancel
 
-    </button>
+        </button>
+
+
+        <button
+            type="button"
+            class="createBtn"
+            id="createBtn"
+            onclick="handleCreateEvent()">
+
+            🚀 Create Event
+
+        </button>
+
+
+    </div>
+
 
 </div>
 
 
 </div>
 
-</div>
 
 <!-- =====================================================
      LOADING
@@ -866,23 +828,28 @@ textarea:focus{
     id="loading">
 
 
-<div class="loadingBox">
+    <div class="loadingBox">
 
-    <div class="spinner"></div>
 
-    <strong>
-        Creating Event...
-    </strong>
+        <div class="spinner"></div>
 
-    <p>
-        Creating Google Form, response spreadsheet,
-        QR code and Event Registry record.
-    </p>
+
+        <strong>
+            Creating Event...
+        </strong>
+
+
+        <p>
+            Creating Google Form, response spreadsheet,
+            QR code and Event Registry record.
+        </p>
+
+
+    </div>
+
 
 </div>
 
-
-</div>
 
 <script>
 
@@ -978,99 +945,6 @@ function hideLoading(){
 
 
 /*****************************************************
- * HEADER IMAGE
- *****************************************************/
-
-let headerImageData = null;
-
-
-document
-    .getElementById("headerImage")
-    .addEventListener(
-        "change",
-        function(event){
-
-            const file =
-                event.target.files[0];
-
-
-            if(!file){
-
-                return;
-
-            }
-
-
-            if(
-                !file.type.startsWith("image/")
-            ){
-
-                alert(
-                    "Please select an image file."
-                );
-
-                event.target.value = "";
-
-                return;
-
-            }
-
-
-            const reader =
-                new FileReader();
-
-
-            reader.onload =
-                function(e){
-
-                    /*
-                     * IMPORTANT:
-                     *
-                     * Backend expects:
-                     *
-                     * base64
-                     * mimeType
-                     * fileName
-                     */
-
-                    headerImageData = {
-
-                        fileName:
-                            file.name,
-
-                        mimeType:
-                            file.type,
-
-                        base64:
-                            e.target.result
-
-                    };
-
-
-                    const preview =
-                        document
-                            .getElementById(
-                                "imagePreview"
-                            );
-
-
-                    preview.src =
-                        e.target.result;
-
-
-                    preview.style.display =
-                        "block";
-
-                };
-
-
-            reader.readAsDataURL(file);
-
-        }
-    );
-
-
-/*****************************************************
  * QUESTIONS
  *****************************************************/
 
@@ -1106,6 +980,7 @@ function addQuestion(){
 
             </span>
 
+
             <button
                 type="button"
                 class="removeBtn"
@@ -1130,6 +1005,7 @@ function addQuestion(){
 
                 </label>
 
+
                 <input
                     type="text"
                     class="questionText"
@@ -1144,36 +1020,45 @@ function addQuestion(){
                     Question Type
                 </label>
 
+
                 <select
                     class="questionType">
+
 
                     <option value="SHORT_ANSWER">
                         Short Answer
                     </option>
 
+
                     <option value="PARAGRAPH">
                         Paragraph
                     </option>
+
 
                     <option value="MULTIPLE_CHOICE">
                         Multiple Choice
                     </option>
 
+
                     <option value="CHECKBOXES">
                         Checkboxes
                     </option>
+
 
                     <option value="DROPDOWN">
                         Dropdown
                     </option>
 
+
                     <option value="DATE">
                         Date
                     </option>
 
+
                     <option value="TIME">
                         Time
                     </option>
+
 
                 </select>
 
@@ -1186,16 +1071,20 @@ function addQuestion(){
                     Required?
                 </label>
 
+
                 <select
                     class="questionRequired">
+
 
                     <option value="YES">
                         Yes
                     </option>
 
+
                     <option value="NO">
                         No
                     </option>
+
 
                 </select>
 
@@ -1208,625 +1097,616 @@ function addQuestion(){
                     Options
                 </label>
 
+
                 <textarea
                     class="questionOptions"
                     placeholder="For Multiple Choice / Checkboxes / Dropdown only.
 
 Enter one option per line."></textarea>
 
+            </div>
+
 
         </div>
 
-
-    </div>
-
-`;
+    `;
 
 
-container.appendChild(card);
-
+    container.appendChild(card);
 
 }
 
-/*****************************************************
 
-* REMOVE QUESTION
-  *****************************************************/
+/*****************************************************
+ * REMOVE QUESTION
+ *****************************************************/
 
 function removeQuestion(button){
 
-
-const card =
-    button.closest(
-        ".questionCard"
-    );
-
-
-if(card){
-
-    card.remove();
-
-}
+    const card =
+        button.closest(
+            ".questionCard"
+        );
 
 
-renumberQuestions();
+    if(card){
 
+        card.remove();
+
+    }
+
+
+    renumberQuestions();
 
 }
+
 
 /*****************************************************
-
-* RENUMBER QUESTIONS
-  *****************************************************/
+ * RENUMBER QUESTIONS
+ *****************************************************/
 
 function renumberQuestions(){
 
+    const cards =
+        document.querySelectorAll(
+            ".questionCard"
+        );
 
-const cards =
-    document.querySelectorAll(
-        ".questionCard"
+
+    cards.forEach(
+        function(card,index){
+
+            const number =
+                card.querySelector(
+                    ".questionNumber"
+                );
+
+
+            number.textContent =
+                "Question " +
+                (index + 1);
+
+        }
     );
-
-
-cards.forEach(
-    function(card,index){
-
-        const number =
-            card.querySelector(
-                ".questionNumber"
-            );
-
-
-        number.textContent =
-            "Question " +
-            (index + 1);
-
-    }
-);
-
 
 }
 
-/*****************************************************
 
-* COLLECT QUESTIONS
-  *****************************************************/
+/*****************************************************
+ * COLLECT QUESTIONS
+ *****************************************************/
 
 function collectQuestions(){
 
+    const cards =
+        document.querySelectorAll(
+            ".questionCard"
+        );
 
-const cards =
-    document.querySelectorAll(
-        ".questionCard"
+
+    const questions = [];
+
+
+    cards.forEach(
+        function(card){
+
+            const text =
+                card.querySelector(
+                    ".questionText"
+                )
+                .value
+                .trim();
+
+
+            if(!text){
+
+                return;
+
+            }
+
+
+            const type =
+                card.querySelector(
+                    ".questionType"
+                )
+                .value;
+
+
+            const required =
+                card.querySelector(
+                    ".questionRequired"
+                )
+                .value === "YES";
+
+
+            const optionsText =
+                card.querySelector(
+                    ".questionOptions"
+                )
+                .value;
+
+
+            const options =
+                optionsText
+                    .split("\n")
+                    .map(
+                        function(option){
+
+                            return option.trim();
+
+                        }
+                    )
+                    .filter(
+                        function(option){
+
+                            return option !== "";
+
+                        }
+                    );
+
+
+            questions.push({
+
+                title:
+                    text,
+
+                type:
+                    type,
+
+                required:
+                    required,
+
+                options:
+                    options
+
+            });
+
+        }
     );
 
 
-const questions = [];
+    return questions;
+
+}
 
 
-cards.forEach(
-    function(card){
+/*****************************************************
+ * VALIDATE EVENT
+ *****************************************************/
 
-        const text =
-            card.querySelector(
-                ".questionText"
+function validateEvent(){
+
+    const eventDate =
+        document
+            .getElementById(
+                "eventDate"
+            )
+            .value;
+
+
+    const eventName =
+        document
+            .getElementById(
+                "eventName"
             )
             .value
             .trim();
 
 
+    const eventType =
+        document
+            .getElementById(
+                "eventType"
+            )
+            .value;
+
+
+    const venue =
+        document
+            .getElementById(
+                "venue"
+            )
+            .value
+            .trim();
+
+
+    const location =
+        document
+            .getElementById(
+                "location"
+            )
+            .value
+            .trim();
+
+
+    if(!eventDate){
+
+        alert(
+            "Event Date is required."
+        );
+
+        return false;
+
+    }
+
+
+    if(!eventName){
+
+        alert(
+            "Event Name is required."
+        );
+
+        return false;
+
+    }
+
+
+    if(!eventType){
+
+        alert(
+            "Event Type is required."
+        );
+
+        return false;
+
+    }
+
+
+    if(!venue){
+
+        alert(
+            "Venue is required."
+        );
+
+        return false;
+
+    }
+
+
+    if(!location){
+
+        alert(
+            "Location is required."
+        );
+
+        return false;
+
+    }
+
+
+    /*
+     * Validate custom questions.
+     */
+
+    const cards =
+        document.querySelectorAll(
+            ".questionCard"
+        );
+
+
+    for(
+        let i = 0;
+        i < cards.length;
+        i++
+    ){
+
+        const text =
+            cards[i]
+                .querySelector(
+                    ".questionText"
+                )
+                .value
+                .trim();
+
+
         if(!text){
 
-            return;
+            alert(
+                "Please complete Question " +
+                (i + 1) +
+                " or remove it."
+            );
+
+            return false;
 
         }
 
 
         const type =
-            card.querySelector(
-                ".questionType"
-            )
-            .value;
-
-
-        const required =
-            card.querySelector(
-                ".questionRequired"
-            )
-            .value === "YES";
+            cards[i]
+                .querySelector(
+                    ".questionType"
+                )
+                .value;
 
 
         const optionsText =
-            card.querySelector(
-                ".questionOptions"
-            )
-            .value;
-
-
-        const options =
-            optionsText
-                .split("\n")
-                .map(
-                    function(option){
-
-                        return option.trim();
-
-                    }
+            cards[i]
+                .querySelector(
+                    ".questionOptions"
                 )
-                .filter(
-                    function(option){
-
-                        return option !== "";
-
-                    }
-                );
+                .value
+                .trim();
 
 
-        questions.push({
+        if(
+            [
+                "MULTIPLE_CHOICE",
+                "CHECKBOXES",
+                "DROPDOWN"
+            ].includes(type)
+            &&
+            !optionsText
+        ){
 
-            title:
-                text,
+            alert(
+                "Please provide options for Question " +
+                (i + 1) +
+                "."
+            );
 
-            type:
-                type,
+            return false;
 
-            required:
-                required,
-
-            options:
-                options
-
-        });
+        }
 
     }
-);
 
 
-return questions;
-
+    return true;
 
 }
+
 
 /*****************************************************
-
-* VALIDATE EVENT
-  *****************************************************/
-
-function validateEvent(){
-
-
-const eventDate =
-    document
-        .getElementById(
-            "eventDate"
-        )
-        .value;
-
-
-const eventName =
-    document
-        .getElementById(
-            "eventName"
-        )
-        .value
-        .trim();
-
-
-const eventType =
-    document
-        .getElementById(
-            "eventType"
-        )
-        .value;
-
-
-const venue =
-    document
-        .getElementById(
-            "venue"
-        )
-        .value
-        .trim();
-
-
-const location =
-    document
-        .getElementById(
-            "location"
-        )
-        .value
-        .trim();
-
-
-if(!eventDate){
-
-    alert(
-        "Event Date is required."
-    );
-
-    return false;
-
-}
-
-
-if(!eventName){
-
-    alert(
-        "Event Name is required."
-    );
-
-    return false;
-
-}
-
-
-if(!eventType){
-
-    alert(
-        "Event Type is required."
-    );
-
-    return false;
-
-}
-
-
-if(!venue){
-
-    alert(
-        "Venue is required."
-    );
-
-    return false;
-
-}
-
-
-if(!location){
-
-    alert(
-        "Location is required."
-    );
-
-    return false;
-
-}
-
-
-/*
- * Validate custom questions.
- */
-
-const cards =
-    document.querySelectorAll(
-        ".questionCard"
-    );
-
-
-for(
-    let i = 0;
-    i < cards.length;
-    i++
-){
-
-    const text =
-        cards[i]
-            .querySelector(
-                ".questionText"
-            )
-            .value
-            .trim();
-
-
-    if(!text){
-
-        alert(
-            "Please complete Question " +
-            (i + 1) +
-            " or remove it."
-        );
-
-        return false;
-
-    }
-
-
-    const type =
-        cards[i]
-            .querySelector(
-                ".questionType"
-            )
-            .value;
-
-
-    const optionsText =
-        cards[i]
-            .querySelector(
-                ".questionOptions"
-            )
-            .value
-            .trim();
-
-
-    if(
-        [
-            "MULTIPLE_CHOICE",
-            "CHECKBOXES",
-            "DROPDOWN"
-        ].includes(type)
-        &&
-        !optionsText
-    ){
-
-        alert(
-            "Please provide options for Question " +
-            (i + 1) +
-            "."
-        );
-
-        return false;
-
-    }
-
-}
-
-
-return true;
-
-
-}
-
-/*****************************************************
-
-* CREATE EVENT
-  *****************************************************/
+ * CREATE EVENT
+ *****************************************************/
 
 async function handleCreateEvent(){
 
+    if(!validateEvent()){
 
-if(!validateEvent()){
+        return;
 
-    return;
-
-}
-
-
-const eventDate =
-    document
-        .getElementById(
-            "eventDate"
-        )
-        .value;
+    }
 
 
-const eventName =
-    document
-        .getElementById(
-            "eventName"
-        )
-        .value
-        .trim();
+    const eventDate =
+        document
+            .getElementById(
+                "eventDate"
+            )
+            .value;
 
 
-const eventType =
-    document
-        .getElementById(
-            "eventType"
-        )
-        .value;
+    const eventName =
+        document
+            .getElementById(
+                "eventName"
+            )
+            .value
+            .trim();
 
 
-const eventDescription =
-    document
-        .getElementById(
-            "eventDescription"
-        )
-        .value
-        .trim();
+    const eventType =
+        document
+            .getElementById(
+                "eventType"
+            )
+            .value;
 
 
-const venue =
-    document
-        .getElementById(
-            "venue"
-        )
-        .value
-        .trim();
+    const eventDescription =
+        document
+            .getElementById(
+                "eventDescription"
+            )
+            .value
+            .trim();
 
 
-const location =
-    document
-        .getElementById(
-            "location"
-        )
-        .value
-        .trim();
+    const venue =
+        document
+            .getElementById(
+                "venue"
+            )
+            .value
+            .trim();
 
 
-const startTime =
-    document
-        .getElementById(
-            "startTime"
-        )
-        .value;
+    const location =
+        document
+            .getElementById(
+                "location"
+            )
+            .value
+            .trim();
 
 
-const endTime =
-    document
-        .getElementById(
-            "endTime"
-        )
-        .value;
+    const startTime =
+        document
+            .getElementById(
+                "startTime"
+            )
+            .value;
 
 
-const questions =
-    collectQuestions();
+    const endTime =
+        document
+            .getElementById(
+                "endTime"
+            )
+            .value;
 
 
-const confirmed =
-    confirm(
-
-        "Create this event?\n\n" +
-
-        "Event: " +
-        eventName +
-        "\n" +
-
-        "Date: " +
-        eventDate +
-        "\n" +
-
-        "Type: " +
-        eventType +
-        "\n" +
-
-        "Venue: " +
-        venue +
-        "\n" +
-
-        "Location: " +
-        location +
-        "\n\n" +
-
-        "This will create:\n" +
-        "• Google Form\n" +
-        "• Response Spreadsheet\n" +
-        "• ACTIVE Event Registry record\n\n" +
-
-        "Continue?"
-
-    );
+    const questions =
+        collectQuestions();
 
 
-if(!confirmed){
+    const confirmed =
+        confirm(
 
-    return;
+            "Create this event?\n\n" +
 
-}
+            "Event: " +
+            eventName +
+            "\n" +
 
+            "Date: " +
+            eventDate +
+            "\n" +
 
-const button =
-    document
-        .getElementById(
-            "createBtn"
+            "Type: " +
+            eventType +
+            "\n" +
+
+            "Time: " +
+            (
+                startTime ||
+                "Not specified"
+            ) +
+            " – " +
+            (
+                endTime ||
+                "Not specified"
+            ) +
+            "\n" +
+
+            "Venue: " +
+            venue +
+            "\n" +
+
+            "Location: " +
+            location +
+            "\n\n" +
+
+            "This will create:\n" +
+            "• Google Form\n" +
+            "• Response Spreadsheet\n" +
+            "• ACTIVE Event Registry record\n\n" +
+
+            "Continue?"
+
         );
 
 
-button.disabled =
-    true;
+    if(!confirmed){
+
+        return;
+
+    }
 
 
-showLoading();
-
-
-try{
-
-    /*
-     * IMPORTANT:
-     *
-     * API action remains:
-     *
-     * createEvent
-     *
-     * Backend router maps this to:
-     *
-     * createEventForm()
-     */
-
-    const result =
-        await runScript(
-            "createEvent",
-            {
-
-                eventDate:
-                    eventDate,
-
-                eventName:
-                    eventName,
-
-                eventType:
-                    eventType,
-
-                eventDescription:
-                    eventDescription,
-
-                venue:
-                    venue,
-
-                location:
-                    location,
-
-                startTime:
-                    startTime,
-
-                endTime:
-                    endTime,
-
-                questions:
-                    JSON.stringify(
-                        questions
-                    ),
-
-                headerImage:
-                    headerImageData
-                        ? JSON.stringify(
-                            headerImageData
-                          )
-                        : "",
-
-                createdBy:
-                    user &&
-                    user.email
-                        ? user.email
-                        : ""
-
-            }
-        );
-
-
-    hideLoading();
-
-
-    showSuccess(
-        result
-    );
-
-}
-catch(err){
-
-    console.error(
-        "CREATE EVENT ERROR:",
-        err
-    );
-
-
-    hideLoading();
-
-
-    alert(
-        "Unable to create event:\n\n" +
-        (
-            err.message ||
-            String(err)
-        )
-    );
+    const button =
+        document
+            .getElementById(
+                "createBtn"
+            );
 
 
     button.disabled =
-        false;
+        true;
+
+
+    showLoading();
+
+
+    try{
+
+        /*
+         * API action remains:
+         *
+         * createEvent
+         *
+         * Backend router maps this to:
+         *
+         * createEventForm()
+         */
+
+        const result =
+            await runScript(
+                "createEvent",
+                {
+
+                    eventDate:
+                        eventDate,
+
+                    eventName:
+                        eventName,
+
+                    eventType:
+                        eventType,
+
+                    eventDescription:
+                        eventDescription,
+
+                    venue:
+                        venue,
+
+                    location:
+                        location,
+
+                    startTime:
+                        startTime,
+
+                    endTime:
+                        endTime,
+
+                    questions:
+                        JSON.stringify(
+                            questions
+                        ),
+
+                    createdBy:
+                        user &&
+                        user.email
+                            ? user.email
+                            : ""
+
+                }
+            );
+
+
+        hideLoading();
+
+
+        showSuccess(
+            result
+        );
+
+    }
+    catch(err){
+
+        console.error(
+            "CREATE EVENT ERROR:",
+            err
+        );
+
+
+        hideLoading();
+
+
+        alert(
+            "Unable to create event:\n\n" +
+            (
+                err.message ||
+                String(err)
+            )
+        );
+
+
+        button.disabled =
+            false;
+
+    }
 
 }
 
-
-}
 
 /*****************************************************
+ * SHOW SUCCESS
+ *****************************************************/
 
-* SHOW SUCCESS
-  *****************************************************/
-
-
-function showSuccess(result) {
+function showSuccess(result){
 
     console.log(
         "CREATE EVENT SUCCESS:",
@@ -1840,9 +1720,10 @@ function showSuccess(result) {
 
     document
         .querySelectorAll(".card")
-        .forEach(function(card) {
+        .forEach(function(card){
 
-            card.style.display = "none";
+            card.style.display =
+                "none";
 
         });
 
@@ -1918,7 +1799,7 @@ function showSuccess(result) {
         );
 
 
-    if (editUrl) {
+    if(editUrl){
 
         formLink.href =
             editUrl;
@@ -1936,7 +1817,7 @@ function showSuccess(result) {
             "inline";
 
     }
-    else {
+    else{
 
         formLink.removeAttribute(
             "href"
@@ -1970,7 +1851,7 @@ function showSuccess(result) {
         );
 
 
-    if (responderUrl) {
+    if(responderUrl){
 
         responderLink.href =
             responderUrl;
@@ -1988,7 +1869,7 @@ function showSuccess(result) {
             "inline";
 
     }
-    else {
+    else{
 
         responderLink.removeAttribute(
             "href"
@@ -2012,7 +1893,7 @@ function showSuccess(result) {
         );
 
 
-    if (responderUrl) {
+    if(responderUrl){
 
         qr.src =
             "https://quickchart.io/qr?size=300&text=" +
@@ -2030,7 +1911,7 @@ function showSuccess(result) {
             "inline-block";
 
     }
-    else {
+    else{
 
         qr.removeAttribute(
             "src"
@@ -2054,6 +1935,7 @@ function showSuccess(result) {
     console.log(
         "SUCCESS DISPLAY:",
         {
+
             eventName:
                 eventName,
 
@@ -2069,7 +1951,9 @@ function showSuccess(result) {
             qrUrl:
                 responderUrl
                     ? "https://quickchart.io/qr?size=300&text=" +
-                      encodeURIComponent(responderUrl)
+                      encodeURIComponent(
+                          responderUrl
+                      )
                     : ""
 
         }
@@ -2077,10 +1961,9 @@ function showSuccess(result) {
 
 }
 
-
-
 </script>
 
 </body>
 
 </html>
+
