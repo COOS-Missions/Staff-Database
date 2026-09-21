@@ -2511,67 +2511,282 @@
         </div>
 
 
-        <!-- =====================================================
-             REMINDER MODULE
-             ===================================================== -->
-
       <!-- =====================================================
-     REMINDER CONFIGURATION
-===================================================== -->
+     REMINDER MODULE
+     ===================================================== -->
 
-<div class="cc-card">
+<div
+    id="ccReminderModule"
+    class="hidden">
 
-    <div class="cc-section-title">
-        <i class="bi bi-bell"></i>
-        Reminder Message
+
+    <!-- =================================================
+         EVENT INFO
+    ================================================= -->
+
+    <div class="cc-card">
+
+        <div class="cc-event-title">
+
+            <div id="ccReminderEventName">
+                -
+            </div>
+
+            <div id="ccReminderEventDate">
+                -
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =================================================
+         REMINDER MESSAGE
+    ================================================= -->
+
+    <div class="cc-card">
+
+        <div class="cc-section-title">
+
+            <i class="bi bi-bell"></i>
+
+            Reminder Message
+
+        </div>
+
+
+        <div class="cc-notice">
+
+            Write a custom message to send to selected
+            registered participants.
+
+        </div>
+
+
+        <label>
+            Custom Message
+        </label>
+
+
+        <textarea
+            id="ccCustomMessage"
+            class="cc-textarea"
+            rows="7"
+            placeholder="Type your reminder message here...">
+        </textarea>
+
+
+        <div class="cc-button-row">
+
+            <button
+                type="button"
+                class="cc-success"
+                onclick="CommunicationsCentre.saveReminderConfig()">
+
+                <i class="bi bi-save"></i>
+
+                Save Message
+
+            </button>
+
+
+            <button
+                type="button"
+                class="cc-preview"
+                onclick="CommunicationsCentre.previewReminderForFirstPerson()">
+
+                <i class="bi bi-eye"></i>
+
+                Preview
+
+            </button>
+
+        </div>
+
     </div>
 
 
-    <div class="cc-notice">
-        Write a custom message to send to selected registered participants.
+    <!-- =================================================
+         REMINDER STATS
+    ================================================= -->
+
+    <div class="cc-stat-grid">
+
+        <div class="cc-stat">
+
+            <div
+                id="ccReminderTotal"
+                class="cc-stat-number">
+
+                0
+
+            </div>
+
+            <div class="cc-stat-label">
+                Registered
+            </div>
+
+        </div>
+
+
+        <div class="cc-stat">
+
+            <div
+                id="ccReminderSent"
+                class="cc-stat-number">
+
+                0
+
+            </div>
+
+            <div class="cc-stat-label">
+                Sent
+            </div>
+
+        </div>
+
+
+        <div class="cc-stat">
+
+            <div
+                id="ccReminderPending"
+                class="cc-stat-number">
+
+                0
+
+            </div>
+
+            <div class="cc-stat-label">
+                Pending
+            </div>
+
+        </div>
+
+
+        <div class="cc-stat">
+
+            <div
+                id="ccReminderFailed"
+                class="cc-stat-number">
+
+                0
+
+            </div>
+
+            <div class="cc-stat-label">
+                Failed
+            </div>
+
+        </div>
+
     </div>
 
 
-    <!-- CUSTOM MESSAGE -->
+    <!-- =================================================
+         REGISTERED PARTICIPANTS
+    ================================================= -->
 
-    <label>
-        Custom Message
-    </label>
+    <div class="cc-card">
 
-    <textarea
-        id="ccCustomMessage"
-        class="cc-textarea"
-        rows="7"
-        placeholder="Type your reminder message here...">
-    </textarea>
+        <div class="cc-section-title">
 
+            <i class="bi bi-people-fill"></i>
 
-    <!-- ACTIONS -->
+            Registered Participants
 
-    <div class="cc-button-row">
-
-        <button
-            type="button"
-            class="cc-success"
-            onclick="CommunicationsCentre.saveReminderConfig()">
-
-            <i class="bi bi-save"></i>
-            Save Message
-
-        </button>
+        </div>
 
 
-        <button
-            type="button"
-            class="cc-preview"
-            onclick="CommunicationsCentre.previewReminderForFirstPerson()">
+        <div class="cc-notice">
 
-            <i class="bi bi-eye"></i>
-            Preview
+            Only people registered for this event are shown
+            here.
 
-        </button>
+        </div>
+
+
+        <div class="cc-table-container">
+
+            <table class="cc-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+
+                            <input
+                                type="checkbox"
+                                id="ccSelectAllReminder"
+                                onchange="CommunicationsCentre.toggleAllReminder(this)">
+
+                        </th>
+
+
+                        <th>
+                            Name
+                        </th>
+
+
+                        <th>
+                            Mobile
+                        </th>
+
+
+                        <th>
+                            Status
+                        </th>
+
+
+                        <th>
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody
+                    id="ccParticipantTable">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <div class="cc-button-row">
+
+            <button
+                type="button"
+                class="cc-whatsapp"
+                onclick="CommunicationsCentre.sendSelectedReminder()">
+
+                <i class="bi bi-whatsapp"></i>
+
+                Send Selected
+
+            </button>
+
+
+            <button
+                type="button"
+                class="cc-secondary"
+                onclick="CommunicationsCentre.loadParticipants()">
+
+                <i class="bi bi-arrow-clockwise"></i>
+
+                Refresh
+
+            </button>
+
+        </div>
 
     </div>
+
 
 </div>
 
@@ -7981,7 +8196,7 @@ window.CommunicationsCentre = (() => {
     }
 
     /* ================= REMINDER ================= */
-   async function loadReminder() {
+  async function loadReminder() {
 
     if (!selectedEvent) return;
 
@@ -7993,9 +8208,12 @@ window.CommunicationsCentre = (() => {
         return;
     }
 
-    document
-        .getElementById("ccReminderModule")
-        ?.classList.remove("hidden");
+    const module =
+        document.getElementById("ccReminderModule");
+
+    if (module) {
+        module.classList.remove("hidden");
+    }
 
     reminderConfig = {
 
@@ -8012,15 +8230,25 @@ window.CommunicationsCentre = (() => {
             ""
     };
 
-    document
-        .getElementById("ccReminderEventName")
-        .textContent =
-            selectedEvent.eventName;
+    const reminderEventName =
+        document.getElementById(
+            "ccReminderEventName"
+        );
 
-    document
-        .getElementById("ccReminderEventDate")
-        .textContent =
+    const reminderEventDate =
+        document.getElementById(
+            "ccReminderEventDate"
+        );
+
+    if (reminderEventName) {
+        reminderEventName.textContent =
+            selectedEvent.eventName;
+    }
+
+    if (reminderEventDate) {
+        reminderEventDate.textContent =
             "📅 " + selectedEvent.eventDate;
+    }
 
     await loadReminderConfiguration();
 
