@@ -7559,9 +7559,116 @@ async function deleteEvent(id) {
 
 
 
+    /* =======================================================
+     RETRIEVE QR CODE
+  ======================================================= */
+
+  async function retrieveQRCode(
+    spreadsheetId
+  ) {
+
+    if (!spreadsheetId) {
+
+      alert(
+        "Event Spreadsheet ID is missing."
+      );
+
+      return;
+
+    }
+
+
+    showLoading();
+
+
+    try {
+
+      const result =
+        await runScript(
+          "retrieveEventQRCode",
+          {
+            spreadsheetId:
+              spreadsheetId
+          }
+        );
+
+
+      if (
+        !result
+      ) {
+
+        throw new Error(
+          "No QR code information was returned."
+        );
+
+      }
+
+
+      console.log(
+        "Event QR Code:",
+        result
+      );
+
+
+      /*
+       * Temporary verification.
+       *
+       * This opens the published Google Form.
+       *
+       * Once confirmed working,
+       * replace this with the QR modal.
+       */
+
+      if (
+        result.publishedUrl
+      ) {
+
+        window.open(
+          result.publishedUrl,
+          "_blank"
+        );
+
+      }
+      else {
+
+        throw new Error(
+          "Published Google Form URL was not returned."
+        );
+
+      }
+
+    }
+
+
+    catch (err) {
+
+      console.error(
+        "retrieveQRCode:",
+        err
+      );
+
+
+      alert(
+        err.message ||
+        "Unable to retrieve the QR code."
+      );
+
+    }
+
+
+    finally {
+
+      hideLoading();
+
+    }
+
+  }
+
+
+
   /* =======================================================
      PUBLIC MODULE API
-  ====================================================== */
+  ======================================================= */
 
   return {
 
@@ -7595,93 +7702,13 @@ async function deleteEvent(id) {
     reopenEvent:
       reopenEvent,
 
-  deleteEvent:
-    deleteEvent
+    deleteEvent:
+      deleteEvent,
+
+    retrieveQRCode:
+      retrieveQRCode
 
   };
-
-  retrieveQRCode: function(spreadsheetId) {
-
-  if (!spreadsheetId) {
-
-    alert(
-      "Event Spreadsheet ID is missing."
-    );
-
-    return;
-
-  }
-
-
-  google.script.run
-
-    .withSuccessHandler(
-      function(result) {
-
-        if (
-          !result ||
-          !result.success
-        ) {
-
-          alert(
-            result?.message ||
-            "Unable to retrieve the QR code."
-          );
-
-          return;
-
-        }
-
-
-        const data =
-          result.data;
-
-
-        console.log(
-          "Event QR Code:",
-          data
-        );
-
-
-        /*
-         * For now, open the published
-         * registration form.
-         *
-         * Once confirmed working,
-         * this can be replaced with
-         * the QR modal.
-         */
-
-        window.open(
-          data.publishedUrl,
-          "_blank"
-        );
-
-      }
-    )
-
-    .withFailureHandler(
-      function(error) {
-
-        console.error(
-          "retrieveQRCode:",
-          error
-        );
-
-
-        alert(
-          error.message ||
-          "Unable to retrieve the QR code."
-        );
-
-      }
-    )
-
-    .retrieveEventQRCode(
-      spreadsheetId
-    );
-
-},
 
 
 })();
