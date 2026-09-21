@@ -2515,312 +2515,65 @@
              REMINDER MODULE
              ===================================================== -->
 
-        <div
-            id="ccReminderModule"
-            class="hidden">
+      <!-- =====================================================
+     REMINDER CONFIGURATION
+===================================================== -->
 
+<div class="cc-card">
 
-            <!-- EVENT INFO -->
+    <div class="cc-section-title">
+        <i class="bi bi-bell"></i>
+        Reminder Message
+    </div>
 
-            <div class="cc-card">
 
-                <div class="cc-event-title">
+    <div class="cc-notice">
+        Write a custom message to send to selected registered participants.
+    </div>
 
-                    <div id="ccReminderEventName">
-                        -
-                    </div>
 
-                    <div id="ccReminderEventDate">
-                        -
-                    </div>
+    <!-- CUSTOM MESSAGE -->
 
-                </div>
+    <label>
+        Custom Message
+    </label>
 
-            </div>
+    <textarea
+        id="ccCustomMessage"
+        class="cc-textarea"
+        rows="7"
+        placeholder="Type your reminder message here...">
+    </textarea>
 
 
-            <!-- REMINDER CONFIGURATION -->
+    <!-- ACTIONS -->
 
-            <div class="cc-card">
+    <div class="cc-button-row">
 
-                <div class="cc-section-title">
-                    <i class="bi bi-bell"></i>
-                    Reminder Configuration
-                </div>
+        <button
+            type="button"
+            class="cc-success"
+            onclick="CommunicationsCentre.saveReminderConfig()">
 
+            <i class="bi bi-save"></i>
+            Save Message
 
-                <label>
-                    Reminder Stage
-                </label>
+        </button>
 
-                <select
-                    id="ccReminderType"
-                    class="cc-form-control"
-                    onchange="CommunicationsCentre.changeReminderType()">
 
-                    <option value="T-7">
-                        T-7
-                    </option>
+        <button
+            type="button"
+            class="cc-preview"
+            onclick="CommunicationsCentre.previewReminderForFirstPerson()">
 
-                    <option value="T-3">
-                        T-3
-                    </option>
+            <i class="bi bi-eye"></i>
+            Preview
 
-                    <option value="T-1">
-                        T-1
-                    </option>
-
-                </select>
-
-
-                <div
-                    id="ccReminderStageNotice"
-                    class="cc-notice">
-                </div>
-
-
-                <div class="cc-two-column">
-
-                    <div>
-
-                        <label>
-                            Reporting Time
-                        </label>
-
-                        <input
-                            id="ccReportingTime"
-                            type="time"
-                            class="cc-form-control">
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
-                            Event Time
-                        </label>
-
-                        <input
-                            id="ccEventTime"
-                            type="time"
-                            class="cc-form-control">
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
-                            Venue
-                        </label>
-
-                        <input
-                            id="ccVenue"
-                            class="cc-form-control">
-
-                    </div>
-
-
-                    <div>
-
-                        <label>
-                            Location
-                        </label>
-
-                        <input
-                            id="ccLocation"
-                            class="cc-form-control">
-
-                    </div>
-
-                </div>
-
-
-                <label>
-                    Important Information
-                </label>
-
-                <textarea
-                    id="ccImportantInfo"
-                    class="cc-textarea"
-                    rows="4">
-                </textarea>
-
-
-                <label>
-                    Custom Message
-                </label>
-
-                <textarea
-                    id="ccCustomMessage"
-                    class="cc-textarea"
-                    rows="5">
-                </textarea>
-
-
-                <div class="cc-button-row">
-
-                    <button
-                        type="button"
-                        class="cc-success"
-                        onclick="CommunicationsCentre.saveReminderConfig()">
-
-                        <i class="bi bi-save"></i>
-                        Save Configuration
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cc-preview"
-                        onclick="CommunicationsCentre.previewReminderForFirstPerson()">
-
-                        <i class="bi bi-eye"></i>
-                        Preview
-
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <!-- REMINDER STATS -->
-
-            <div class="cc-stat-grid">
-
-                <div class="cc-stat">
-                    <div
-                        id="ccReminderTotal"
-                        class="cc-stat-number">
-                        0
-                    </div>
-
-                    <div class="cc-stat-label">
-                        Total
-                    </div>
-                </div>
-
-
-                <div class="cc-stat">
-                    <div
-                        id="ccReminderSent"
-                        class="cc-stat-number">
-                        0
-                    </div>
-
-                    <div class="cc-stat-label">
-                        Sent
-                    </div>
-                </div>
-
-
-                <div class="cc-stat">
-                    <div
-                        id="ccReminderPending"
-                        class="cc-stat-number">
-                        0
-                    </div>
-
-                    <div class="cc-stat-label">
-                        Pending
-                    </div>
-                </div>
-
-
-                <div class="cc-stat">
-                    <div
-                        id="ccReminderFailed"
-                        class="cc-stat-number">
-                        0
-                    </div>
-
-                    <div class="cc-stat-label">
-                        Failed
-                    </div>
-                </div>
-
-            </div>
-
-
-            <!-- REMINDER PARTICIPANTS -->
-
-            <div class="cc-card">
-
-                <div class="cc-section-title">
-                    <i class="bi bi-people-fill"></i>
-                    Reminder Participants
-                </div>
-
-
-                <div class="cc-table-container">
-
-                    <table class="cc-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    <input
-                                        type="checkbox"
-                                        id="ccSelectAllReminder"
-                                        onchange="CommunicationsCentre.toggleAllReminder(this)">
-                                </th>
-
-                                <th>Name</th>
-
-                                <th>Mobile</th>
-
-                                <th>Status</th>
-
-                                <th>Action</th>
-
-                            </tr>
-
-                        </thead>
-
-                        <tbody id="ccParticipantTable">
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-
-                <div class="cc-button-row">
-
-                    <button
-                        type="button"
-                        class="cc-whatsapp"
-                        onclick="CommunicationsCentre.sendSelectedReminder()">
-
-                        <i class="bi bi-whatsapp"></i>
-                        Send Selected
-
-                    </button>
-
-
-                    <button
-                        type="button"
-                        class="cc-secondary"
-                        onclick="CommunicationsCentre.loadParticipants()">
-
-                        <i class="bi bi-arrow-clockwise"></i>
-                        Refresh
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </div>
+        </button>
 
     </div>
+
+</div>
 
 </section>
     
@@ -7800,48 +7553,110 @@ window.CommunicationsCentre = (() => {
         return Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
     }
 
-    function getReminderAvailability() {
-        const days = getDaysRemaining();
-        if (days === null) return { available: false, reason: "Event date unavailable." };
-        if (days < 0) return { available: false, reason: "Event has already taken place." };
-        if (days <= 7) return { available: true, reason: "Reminder communication is available." };
-        return { available: false, reason: `Reminder available within 7 days of the event. ${days} days remaining.` };
+   function getReminderAvailability() {
+
+    if (!selectedEvent) {
+        return {
+            available: false,
+            reason: "Please select an event first."
+        };
     }
+
+    return {
+        available: true,
+        reason: "Reminder communication is available."
+    };
+}
 
     /* ================= LIFECYCLE ================= */
-    function updateLifecycleStatus() {
-        if (!selectedEvent) return;
+   function updateLifecycleStatus() {
 
-        const days = getDaysRemaining();
-        const reminder = getReminderAvailability();
+    if (!selectedEvent) return;
 
-        const status = document.getElementById("ccLifecycleStatus");
-        if (status) {
-            status.innerHTML = `
-                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
-                    <strong>📢 Publicity</strong>
-                    <span class="badge badge-green">AVAILABLE</span>
-                </div>
-                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
-                    <strong>⏰ Reminder</strong>
-                    
-                    <span class="badge ${reminder.available ? "badge-green" : "badge-yellow"}">
-                        ${reminder.available ? "AVAILABLE" : "NOT YET AVAILABLE"}
-                    </span>
-                </div>
-                <div class="status-row" style="display:flex;justify-content:space-between;padding:8px 0;">
-                    <strong>Event</strong>
-                    <span>${days === null ? "Unknown" : days === 0 ? "Today" : days > 0 ? `${days} day(s) remaining` : "Event completed"}</span>
-                </div>
-            `;
-        }
+    const days = getDaysRemaining();
 
-        const availabilityText = document.getElementById("ccReminderAvailabilityText");
-        if (availabilityText) availabilityText.textContent = reminder.reason;
+    const status =
+        document.getElementById(
+            "ccLifecycleStatus"
+        );
 
-        const reminderButton = document.getElementById("ccReminderActivityButton");
-        if (reminderButton) reminderButton.classList.toggle("disabled", !reminder.available);
+    if (status) {
+
+        status.innerHTML = `
+            <div
+                class="status-row"
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    padding:8px 0;
+                "
+            >
+                <strong>📢 Publicity</strong>
+
+                <span class="badge badge-green">
+                    AVAILABLE
+                </span>
+            </div>
+
+            <div
+                class="status-row"
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    padding:8px 0;
+                "
+            >
+                <strong>⏰ Reminder</strong>
+
+                <span class="badge badge-green">
+                    AVAILABLE
+                </span>
+            </div>
+
+            <div
+                class="status-row"
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    padding:8px 0;
+                "
+            >
+                <strong>Event</strong>
+
+                <span>
+                    ${
+                        days === null
+                            ? "Unknown"
+                            : days === 0
+                                ? "Today"
+                                : days > 0
+                                    ? `${days} day(s) remaining`
+                                    : "Event completed"
+                    }
+                </span>
+            </div>
+        `;
     }
+
+    const availabilityText =
+        document.getElementById(
+            "ccReminderAvailabilityText"
+        );
+
+    if (availabilityText) {
+        availabilityText.textContent =
+            "You can send a custom reminder whenever needed.";
+    }
+
+    const reminderButton =
+        document.getElementById(
+            "ccReminderActivityButton"
+        );
+
+    if (reminderButton) {
+        reminderButton.classList.remove("disabled");
+    }
+}
 
     /* ================= ACTIVITY ================= */
     async function selectActivity(activity) {
@@ -8166,121 +7981,241 @@ window.CommunicationsCentre = (() => {
     }
 
     /* ================= REMINDER ================= */
-    async function loadReminder() {
-        if (!selectedEvent) return;
+   async function loadReminder() {
 
-        const availability = getReminderAvailability();
-        if (!availability.available) { alert(availability.reason); return; }
+    if (!selectedEvent) return;
 
-        document.getElementById("ccReminderModule")?.classList.remove("hidden");
+    const availability =
+        getReminderAvailability();
 
-        reminderConfig = {
-            spreadsheetId: selectedEvent.spreadsheetId,
-            eventName: selectedEvent.eventName,
-            eventDate: selectedEvent.eventDate,
-            reminderType: determineDefaultReminderStage()
-        };
-
-        document.getElementById("ccReminderType").value = reminderConfig.reminderType;
-        document.getElementById("ccReminderEventName").textContent = selectedEvent.eventName;
-        document.getElementById("ccReminderEventDate").textContent = "📅 " + selectedEvent.eventDate;
-
-        updateReminderStageNotice();
-        await loadReminderConfiguration();
-        await loadParticipants();
+    if (!availability.available) {
+        alert(availability.reason);
+        return;
     }
 
-    function determineDefaultReminderStage() {
-        const days = getDaysRemaining();
-        if (days === null) return "T-7";
-        if (days <= 1) return "T-1";
-        if (days <= 3) return "T-3";
-        return "T-7";
-    }
+    document
+        .getElementById("ccReminderModule")
+        ?.classList.remove("hidden");
 
-    async function loadReminderConfiguration() {
-        if (!selectedEvent) return;
-        try {
-            const response = await API.post("getReminderConfiguration", {
-                data: JSON.stringify({ spreadsheetId: selectedEvent.spreadsheetId, reminderType: reminderConfig.reminderType })
-            });
-            if (!response || !response.success) throw new Error(response?.message || "Unable to load reminder configuration");
+    reminderConfig = {
 
-            const saved = response.data;
-            if (saved) {
-                document.getElementById("ccReportingTime").value = saved.reportingTime || "";
-                document.getElementById("ccEventTime").value = saved.eventTime || "";
-                document.getElementById("ccVenue").value = saved.venue || "";
-                document.getElementById("ccLocation").value = saved.location || "";
-                document.getElementById("ccImportantInfo").value = saved.importantInfo || "";
-                document.getElementById("ccCustomMessage").value = saved.customMessage || "";
-            }
-        } catch (error) {
-            console.warn("loadReminderConfiguration:", error);
+        spreadsheetId:
+            selectedEvent.spreadsheetId,
+
+        eventName:
+            selectedEvent.eventName,
+
+        eventDate:
+            selectedEvent.eventDate,
+
+        customMessage:
+            ""
+    };
+
+    document
+        .getElementById("ccReminderEventName")
+        .textContent =
+            selectedEvent.eventName;
+
+    document
+        .getElementById("ccReminderEventDate")
+        .textContent =
+            "📅 " + selectedEvent.eventDate;
+
+    await loadReminderConfiguration();
+
+    await loadParticipants();
+}
+
+   
+
+   async function loadReminderConfiguration() {
+
+    if (!selectedEvent) return;
+
+    try {
+
+        const response =
+            await API.post(
+                "getReminderConfiguration",
+                {
+                    data: JSON.stringify({
+                        spreadsheetId:
+                            selectedEvent.spreadsheetId
+                    })
+                }
+            );
+
+        if (
+            !response ||
+            !response.success
+        ) {
+            throw new Error(
+                response?.message ||
+                "Unable to load reminder configuration"
+            );
         }
-        updateReminderStageNotice();
-    }
 
-    async function changeReminderType() {
-        if (!selectedEvent) return;
-        reminderConfig.reminderType = document.getElementById("ccReminderType").value;
-        await loadReminderConfiguration();
-        await loadParticipants();
-    }
+        const saved =
+            response.data;
 
-    function updateReminderStageNotice() {
-        const stage = reminderConfig.reminderType;
-        const days = getDaysRemaining();
-        const labels = {
-            "T-7": "T-7 reminder — intended for about one week before the event.",
-            "T-3": "T-3 reminder — intended for about three days before the event.",
-            "T-1": "T-1 reminder — intended for the day before the event."
-        };
-        let text = labels[stage] || "";
-        if (days !== null) text += ` Current event timing: ${days} day(s) remaining.`;
-        const notice = document.getElementById("ccReminderStageNotice");
-        if (notice) notice.textContent = text;
-    }
+        if (saved) {
 
-    async function saveReminderConfig() {
-        if (!selectedEvent) return;
-
-        reminderConfig.reportingTime = document.getElementById("ccReportingTime").value;
-        reminderConfig.eventTime = document.getElementById("ccEventTime").value;
-        reminderConfig.venue = document.getElementById("ccVenue").value;
-        reminderConfig.location = document.getElementById("ccLocation").value;
-        reminderConfig.importantInfo = document.getElementById("ccImportantInfo").value;
-        reminderConfig.customMessage = document.getElementById("ccCustomMessage").value;
-
-        try {
-            const response = await API.post("saveReminderConfiguration", reminderConfig);
-            if (!response || !response.success) throw new Error(response?.message || "Unable to save reminder configuration");
-            alert("Reminder configuration saved.");
-            await loadParticipants();
-        } catch (error) {
-            console.error(error);
-            alert("Unable to save reminder configuration.\n\n" + error.message);
+            document
+                .getElementById(
+                    "ccCustomMessage"
+                )
+                .value =
+                    saved.customMessage ||
+                    saved.message ||
+                    "";
         }
+
+    } catch (error) {
+
+        console.warn(
+            "loadReminderConfiguration:",
+            error
+        );
     }
+}
+
+  
+
+  
+
+  async function saveReminderConfig() {
+
+    if (!selectedEvent) return;
+
+    const customMessage =
+        document
+            .getElementById(
+                "ccCustomMessage"
+            )
+            .value
+            .trim();
+
+    if (!customMessage) {
+
+        alert(
+            "Please enter a custom reminder message first."
+        );
+
+        return;
+    }
+
+    reminderConfig = {
+
+        spreadsheetId:
+            selectedEvent.spreadsheetId,
+
+        eventName:
+            selectedEvent.eventName,
+
+        eventDate:
+            selectedEvent.eventDate,
+
+        customMessage:
+            customMessage
+    };
+
+    try {
+
+        const response =
+            await API.post(
+                "saveReminderConfiguration",
+                reminderConfig
+            );
+
+        if (
+            !response ||
+            !response.success
+        ) {
+            throw new Error(
+                response?.message ||
+                "Unable to save reminder configuration"
+            );
+        }
+
+        alert(
+            "Custom reminder message saved."
+        );
+
+        await loadParticipants();
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+
+        alert(
+            "Unable to save reminder message.\n\n" +
+            error.message
+        );
+    }
+}
 
     async function loadParticipants() {
-        if (!selectedEvent) return;
-        try {
-            const response = await API.post("getReminderParticipants", {
-                spreadsheetId: selectedEvent.spreadsheetId,
-                reminderType: reminderConfig.reminderType
-            });
-            if (!response || !response.success) throw new Error(response?.message || "Unable to load participants");
 
-            participants = deduplicatePeople(response.data || []);
-            sortByName(participants);
-            renderParticipants();
-        } catch (error) {
-            console.error(error);
-            const table = document.getElementById("ccParticipantTable");
-            if (table) table.innerHTML = `<tr><td colspan="5">Unable to load participants.</td></tr>`;
+    if (!selectedEvent) return;
+
+    try {
+
+        const response =
+            await API.post(
+                "getReminderParticipants",
+                {
+                    spreadsheetId:
+                        selectedEvent.spreadsheetId
+                }
+            );
+
+        if (
+            !response ||
+            !response.success
+        ) {
+            throw new Error(
+                response?.message ||
+                "Unable to load participants"
+            );
+        }
+
+        participants =
+            deduplicatePeople(
+                response.data || []
+            );
+
+        sortByName(
+            participants
+        );
+
+        renderParticipants();
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
+
+        const table =
+            document.getElementById(
+                "ccParticipantTable"
+            );
+
+        if (table) {
+
+            table.innerHTML =
+                `<tr>
+                    <td colspan="5">
+                        Unable to load participants.
+                    </td>
+                </tr>`;
+
         }
     }
+}
 
     function renderParticipants() {
         const table = document.getElementById("ccParticipantTable");
@@ -8327,29 +8262,25 @@ window.CommunicationsCentre = (() => {
     }
 
     function generateReminderMessage(person) {
-        const name = getPersonName(person);
-        let intro = "";
 
-        switch (reminderConfig.reminderType) {
-            case "T-7":
-                intro = `Hi ${name}! 👋\n\nThank you for registering for *${reminderConfig.eventName}*. We're delighted you'll be joining us!`;
-                break;
-            case "T-3":
-                intro = `Hi ${name}! 😊\n\nOnly *3 days to go* until *${reminderConfig.eventName}*!`;
-                break;
-            case "T-1":
-                intro = `Hi ${name}! 👋\n\nJust a reminder that *${reminderConfig.eventName}* is happening *tomorrow*!`;
-                break;
-        }
+    const baseMessage =
+        reminderConfig.customMessage ||
+        document
+            .getElementById(
+                "ccCustomMessage"
+            )
+            ?.value ||
+        "";
 
-        let message = `${intro}\n\n📅 *Date*: ${reminderConfig.eventDate}\n🕒 *Reporting Time*: ${reminderConfig.reportingTime || ""}\n⏰ *Programme Starts*: ${reminderConfig.eventTime || ""}\n📍 *Venue*: ${reminderConfig.venue || ""}\n📌 *Location*: ${reminderConfig.location || ""}\n\n`;
-
-        if (reminderConfig.importantInfo) message += `ℹ️ *Important Information*\n${reminderConfig.importantInfo}\n\n`;
-        if (reminderConfig.customMessage) message += `💬 *A Message From Us*\n${reminderConfig.customMessage}\n\n`;
-
-        message += `If you have any questions, feel free to let us know.\n\nBlessings,\n*Missions Team*`;
-        return message;
+    if (!baseMessage.trim()) {
+        return "";
     }
+
+    return personaliseMessage(
+        baseMessage,
+        person
+    );
+}
 
     function previewReminder(index) {
         const person = participants[index];
@@ -8362,45 +8293,134 @@ window.CommunicationsCentre = (() => {
         previewReminder(0);
     }
 
-    async function prepareReminderWhatsApp(person, message) {
-        try {
-            const response = await API.post("prepareReminderWhatsApp", {
-                personId: getPersonId(person),
-                eventId: selectedEvent.spreadsheetId,
-                eventName: selectedEvent.eventName,
-                mobile: getPersonMobile(person),
-                name: getPersonName(person),
-                reminderType: reminderConfig.reminderType,
-                message
-            });
-            if (!response.success) throw new Error(response.message || "Unable to prepare reminder");
-            return response;
-        } catch (error) {
-            console.warn("prepareReminderWhatsApp:", error);
-            return null;
+   async function prepareReminderWhatsApp(
+    person,
+    message
+) {
+
+    try {
+
+        const response =
+            await API.post(
+                "prepareReminderWhatsApp",
+                {
+                    personId:
+                        getPersonId(person),
+
+                    eventId:
+                        selectedEvent.spreadsheetId,
+
+                    eventName:
+                        selectedEvent.eventName,
+
+                    mobile:
+                        getPersonMobile(person),
+
+                    name:
+                        getPersonName(person),
+
+                    message:
+                        message
+                }
+            );
+
+        if (!response.success) {
+
+            throw new Error(
+                response.message ||
+                "Unable to prepare reminder"
+            );
+
         }
+
+        return response;
+
+    } catch (error) {
+
+        console.warn(
+            "prepareReminderWhatsApp:",
+            error
+        );
+
+        return null;
+    }
+}
+
+   async function openManualReminderWhatsApp(index) {
+
+    const person =
+        participants[index];
+
+    if (!person) return;
+
+    const status =
+        String(
+            person.reminderStatus ||
+            person.ReminderStatus ||
+            ""
+        ).toUpperCase();
+
+    if (status === "SENT") {
+
+        alert(
+            `${getPersonName(person)} has already received this reminder.`
+        );
+
+        return;
     }
 
-    async function openManualReminderWhatsApp(index) {
-        const person = participants[index];
-        if (!person) return;
+    const phone =
+        normalisePhone(
+            getPersonMobile(person)
+        );
 
-        const status = String(person.reminderStatus || person.ReminderStatus || "").toUpperCase();
-        if (status === "SENT") { alert(`${getPersonName(person)} has already received this reminder.`); return; }
+    if (!phone) {
 
-        const phone = normalisePhone(getPersonMobile(person));
-        if (!phone) { alert(`${getPersonName(person)} does not have a valid mobile number.`); return; }
+        alert(
+            `${getPersonName(person)} does not have a valid mobile number.`
+        );
 
-        const message = generateReminderMessage(person);
-        await prepareReminderWhatsApp(person, message);
-        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
-
-        const sent = confirm(`WhatsApp has been opened for ${getPersonName(person)}.\n\nDid you send the reminder?`);
-        if (!sent) return;
-
-        await markCommunicationSent(person, "REMINDER", reminderConfig.reminderType, message);
+        return;
     }
 
+    const message =
+        generateReminderMessage(
+            person
+        );
+
+    if (!message.trim()) {
+
+        alert(
+            "Please enter a custom reminder message first."
+        );
+
+        return;
+    }
+
+    await prepareReminderWhatsApp(
+        person,
+        message
+    );
+
+    window.open(
+        `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+        "_blank"
+    );
+
+    const sent =
+        confirm(
+            `WhatsApp has been opened for ${getPersonName(person)}.\n\nDid you send the reminder?`
+        );
+
+    if (!sent) return;
+
+    await markCommunicationSent(
+        person,
+        "REMINDER",
+        "",
+        message
+    );
+}
     async function sendSelectedReminder() {
         const selected = document.querySelectorAll(".cc-reminder-check:checked");
         if (selected.length === 0) { alert("Please select people first."); return; }
@@ -8543,7 +8563,7 @@ window.CommunicationsCentre = (() => {
         previewPublicityCampaign, previewPublicityPerson, openManualPublicityWhatsApp,
         savePublicityConfiguration, refreshPublicityAudience, sendSelectedPublicity,
         previewReminder, previewReminderForFirstPerson, openManualReminderWhatsApp,
-        saveReminderConfig, changeReminderType, loadParticipants, sendSelectedReminder,
+        saveReminderConfig, loadParticipants, sendSelectedReminder,
         toggleAllPublicity, toggleAllReminder
     };
 
